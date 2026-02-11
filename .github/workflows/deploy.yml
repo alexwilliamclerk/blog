@@ -39,10 +39,16 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
+      # ✅ 关键：不泄露私钥内容，但验证是否“真的是一把可用私钥”
+      - name: Check SSH key (safe)
+        run: |
+          echo "Key bytes:"; wc -c < ~/.ssh/id_ed25519
+          echo "Has header?"; grep -q "BEGIN OPENSSH PRIVATE KEY" ~/.ssh/id_ed25519 && echo YES || echo NO
+          echo "Fingerprint:"; ssh-keygen -lf ~/.ssh/id_ed25519
+
       - name: Deploy (rsync)
         run: |
           rsync -az --delete \
-            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes" \
             blog/dist/ \
             "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_PATH }}/"
-

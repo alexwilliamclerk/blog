@@ -1,0 +1,340 @@
+---
+import { getCollection } from "astro:content";
+
+// 读取 poems / photos；即使某个 collection 暂时不存在，也不让页面报错
+let poems: any[] = [];
+let photos: any[] = [];
+
+try {
+  poems = await getCollection("poems");
+} catch (e) {
+  poems = [];
+}
+
+try {
+  photos = await getCollection("photos");
+} catch (e) {
+  photos = [];
+}
+
+// 过滤草稿（draft:true）
+poems = poems.filter((p) => !p.data?.draft);
+photos = photos.filter((p) => !p.data?.draft);
+
+// 统一成一个可搜索列表
+type SearchItem = {
+  type: "poem" | "photo";
+  title: string;
+  date: string;          // YYYY-MM-DD
+  url: string;
+  summary: string;
+  extra: string;         // location/camera/lens 等
+  tags: string[];
+};
+
+const items: SearchItem[] = [
+  ...poems.map((p) => ({
+    type: "poem" as const,
+    title: p.data?.title ?? p.slug,
+    date: p.data?.date ? new Date(p.data.date).toISOString().slice(0, 10) : "",
+    url: `/poems/${p.slug}/`,
+    summary: p.data?.summary ?? "",
+    extra: "",
+    tags: Array.isArray(p.data?.tags) ? p.data.tags : [],
+  })),
+  ...photos.map((p) => ({
+    type: "photo" as const,
+    title: p.data?.title ?? p.slug,
+    date: p.data?.date ? new Date(p.data.date).toISOString().slice(0, 10) : "",
+    url: `/photos/${p.slug}/`,
+    summary: p.data?.summary ?? "",
+    extra: [p.data?.location, p.data?.camera, p.data?.lens].filter(Boolean).join(" · "),
+    tags: Array.isArray(p.data?.tags) ? p.data.tags : [],
+  })),
+].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+const total = items.length;
+---
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>搜索</title>
+
+    <style>
+      :root{
+        --bg:#0f1115;
+        --card:#151821;
+        --border:rgba(255,255,255,.08);
+        --text:#e6e6e6;
+        --muted:rgba(255,255,255,.55);
+        --accent:#7ef29a;
+      }
+      body{
+        margin:0;
+        background:var(--bg);
+        color:var(--text);
+        font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial;
+      }
+      .wrap{
+        max-width:1100px;
+        margin:0 auto;
+        padding:32px 20px 70px;
+      }
+      .nav{
+        display:flex;
+        gap:18px;
+        margin-bottom:36px;
+      }
+      .nav a{
+        color:var(--muted);
+        text-decoration:none;
+        font-size:14px;
+      }
+      .nav a.active{ color:var(--accent); }
+
+      h1{ margin:0 0 12px; font-size:28px; }
+      .desc{ color:var(--muted); margin:0 0 18px; font-size:14px; }
+
+      .bar{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+        align-items:center;
+        margin-bottom:16px;
+      }
+      .input{
+        flex:1;
+        min-width:240px;
+        padding:12px 14px;
+        border-radius:14px;
+        border:1px solid var(--border);
+        background:rgba(255,255,255,.03);
+        color:var(--text);
+        outline:none;
+      }
+      .input:focus{
+        border-color:rgba(126,242,154,.6);
+        box-shadow:0 0 0 3px rgba(126,242,154,.12);
+      }
+
+      .chip{
+        padding:9px 12px;
+        border-radius:999px;
+        border:1px solid var(--border);
+        background:rgba(255,255,255,.02);
+        color:var(--muted);
+        font-size:13px;
+        cursor:pointer;
+        user-select:none;
+      }
+      .chip.active{
+        color:var(--accent);
+        border-color:rgba(126,242,154,.45);
+        background:rgba(126,242,154,.08);
+      }
+
+      .count{ color:var(--muted); font-size:13px; margin:10px 0 18px; }
+
+      .list{
+        display:grid;
+        gap:12px;
+      }
+      .item{
+        background:var(--card);
+        border:1px solid var(--border);
+        border-radius:16px;
+        padding:14px 16px;
+        text-decoration:none;
+        color:inherit;
+        transition:transform .25s ease,border-color .25s ease;
+      }
+      .item:hover{
+        border-color:var(--accent);
+        transform:translateY(-2px);
+      }
+      .row{
+        display:flex;
+        justify-content:space-between;
+        gap:12px;
+        flex-wrap:wrap;
+        align-items:baseline;
+      }
+      .title{
+        font-weight:600;
+        font-size:16px;
+        margin:0;
+      }
+      .meta{
+        color:var(--muted);
+        font-size:13px;
+        margin-top:6px;
+      }
+      .summary{
+        color:var(--muted);
+        font-size:14px;
+        margin-top:8px;
+        line-height:1.6;
+      }
+      .tags{
+        display:flex;
+        gap:6px;
+        flex-wrap:wrap;
+        margin-top:10px;
+      }
+      .pill{
+        font-size:12px;
+        padding:4px 10px;
+        border-radius:999px;
+        background:rgba(126,242,154,.08);
+        color:var(--accent);
+        border:1px solid rgba(126,242,154,.30);
+      }
+
+      .empty{
+        background:var(--card);
+        border:1px solid var(--border);
+        border-radius:16px;
+        padding:18px;
+        color:var(--muted);
+        line-height:1.7;
+      }
+      code{
+        background:rgba(255,255,255,.06);
+        padding:2px 6px;
+        border-radius:8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <div class="nav">
+        <a href="/">首页</a>
+        <a href="/poems/">诗歌</a>
+        <a href="/photos/">摄影</a>
+        <a href="/search/" class="active">搜索</a>
+      </div>
+
+      <h1>搜索</h1>
+      <p class="desc">在诗歌与摄影中检索标题、摘要、标签、以及摄影的地点/设备信息。</p>
+
+      <div class="bar">
+        <input id="q" class="input" placeholder="输入关键词（例如：校园 / 夜景 / Nikon / 雪）" />
+        <div id="chipAll" class="chip active" role="button" tabindex="0">全部</div>
+        <div id="chipPoem" class="chip" role="button" tabindex="0">诗歌</div>
+        <div id="chipPhoto" class="chip" role="button" tabindex="0">摄影</div>
+      </div>
+
+      <div class="count">
+        共 <span id="total">{total}</span> 条内容 · 当前匹配 <span id="matched">{total}</span> 条
+      </div>
+
+      <div id="list" class="list"></div>
+
+      {total === 0 ? (
+        <div class="empty" style="margin-top:14px;">
+          你现在还没有可搜索的内容。<br />
+          请先添加：<code>src/content/poems/*.md</code> 或 <code>src/content/photos/*.md</code>。
+        </div>
+      ) : null}
+
+      <script define:vars={{ items }}>
+        const $q = document.getElementById("q");
+        const $list = document.getElementById("list");
+        const $matched = document.getElementById("matched");
+
+        const $chipAll = document.getElementById("chipAll");
+        const $chipPoem = document.getElementById("chipPoem");
+        const $chipPhoto = document.getElementById("chipPhoto");
+
+        let typeFilter = "all"; // all | poem | photo
+
+        function escapeHtml(s) {
+          return String(s)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+        }
+
+        function setActiveChip() {
+          $chipAll.classList.toggle("active", typeFilter === "all");
+          $chipPoem.classList.toggle("active", typeFilter === "poem");
+          $chipPhoto.classList.toggle("active", typeFilter === "photo");
+        }
+
+        function normalize(s) {
+          return String(s || "").toLowerCase();
+        }
+
+        function matchItem(it, kw) {
+          if (typeFilter !== "all" && it.type !== typeFilter) return false;
+          if (!kw) return true;
+
+          const hay = normalize(
+            it.title + " " +
+            it.summary + " " +
+            it.extra + " " +
+            (Array.isArray(it.tags) ? it.tags.join(" ") : "")
+          );
+          return hay.includes(kw);
+        }
+
+        function render(rows) {
+          $matched.textContent = String(rows.length);
+
+          if (rows.length === 0) {
+            $list.innerHTML = `
+              <div class="empty">
+                没有匹配结果。<br />
+                你可以试试更短的关键词，或切换“全部/诗歌/摄影”筛选。
+              </div>
+            `;
+            return;
+          }
+
+          $list.innerHTML = rows.map((r) => {
+            const typeLabel = r.type === "poem" ? "诗歌" : "摄影";
+            const extra = r.extra ? ` · ${escapeHtml(r.extra)}` : "";
+            const summary = r.summary ? `<div class="summary">${escapeHtml(r.summary)}</div>` : "";
+            const tags = (r.tags && r.tags.length)
+              ? `<div class="tags">${r.tags.slice(0, 6).map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("")}</div>`
+              : "";
+
+            return `
+              <a class="item" href="${r.url}">
+                <div class="row">
+                  <div class="title">${escapeHtml(r.title)}</div>
+                  <div style="color:var(--muted);font-size:13px;">${escapeHtml(r.date || "")}</div>
+                </div>
+                <div class="meta">${typeLabel}${extra}</div>
+                ${summary}
+                ${tags}
+              </a>
+            `;
+          }).join("");
+        }
+
+        function update() {
+          const kw = normalize($q.value.trim());
+          const rows = items.filter((it) => matchItem(it, kw));
+          render(rows);
+        }
+
+        // chip click
+        $chipAll.addEventListener("click", () => { typeFilter = "all"; setActiveChip(); update(); });
+        $chipPoem.addEventListener("click", () => { typeFilter = "poem"; setActiveChip(); update(); });
+        $chipPhoto.addEventListener("click", () => { typeFilter = "photo"; setActiveChip(); update(); });
+
+        // input
+        $q.addEventListener("input", update);
+
+        // initial
+        render(items);
+      </script>
+    </div>
+  </body>
+</html>

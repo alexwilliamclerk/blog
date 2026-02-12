@@ -1,0 +1,212 @@
+---
+import { getCollection } from "astro:content";
+
+export async function getStaticPaths() {
+  const items = await getCollection("photos");
+  return items
+    .filter((p) => !p.data?.draft)
+    .map((p) => ({
+      params: { slug: p.slug },
+      props: { item: p },
+    }));
+}
+
+const { item } = Astro.props;
+const { Content } = await item.render();
+
+const title = item.data?.title ?? item.slug;
+const dateStr = item.data?.date ? new Date(item.data.date).toISOString().slice(0, 10) : "";
+const photos: string[] = Array.isArray(item.data?.photos) ? item.data.photos : [];
+---
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · 摄影</title>
+
+    <style>
+      :root{
+        --bg:#0f1115;
+        --card:#151821;
+        --border:rgba(255,255,255,.08);
+        --text:#e6e6e6;
+        --muted:rgba(255,255,255,.55);
+        --accent:#7ef29a;
+      }
+      body{
+        margin:0;
+        background:var(--bg);
+        color:var(--text);
+        font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial;
+      }
+      .wrap{
+        max-width:1100px;
+        margin:0 auto;
+        padding:32px 20px 70px;
+      }
+      .nav{
+        display:flex;
+        gap:18px;
+        margin-bottom:36px;
+      }
+      .nav a{
+        color:var(--muted);
+        text-decoration:none;
+        font-size:14px;
+      }
+      .nav a.active{ color:var(--accent); }
+
+      .crumbs{
+        display:flex;
+        gap:10px;
+        align-items:center;
+        margin-bottom:18px;
+        color:var(--muted);
+        font-size:14px;
+      }
+      .crumbs a{
+        color:var(--muted);
+        text-decoration:none;
+      }
+      .crumbs a:hover{ color:var(--accent); }
+
+      h1{ margin:0 0 10px; font-size:28px; }
+      .meta{ color:var(--muted); font-size:14px; margin-bottom:12px; }
+
+      .tags{
+        display:flex;
+        flex-wrap:wrap;
+        gap:6px;
+        margin:12px 0 18px;
+      }
+      .pill{
+        font-size:12px;
+        padding:4px 10px;
+        border-radius:999px;
+        background:rgba(126,242,154,.08);
+        color:var(--accent);
+        border:1px solid rgba(126,242,154,.30);
+      }
+
+      .panel{
+        background:var(--card);
+        border:1px solid var(--border);
+        border-radius:16px;
+        padding:16px;
+      }
+
+      .specs{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:10px;
+        margin-bottom:14px;
+      }
+      .spec{
+        padding:10px 12px;
+        border:1px solid var(--border);
+        border-radius:12px;
+        color:var(--muted);
+        font-size:13px;
+      }
+      .spec b{ color:var(--text); font-weight:600; }
+
+      .note{
+        color:var(--muted);
+        line-height:1.7;
+        font-size:14px;
+        margin-top:12px;
+      }
+
+      .gallery{
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+        gap:14px;
+        margin-top:12px;
+      }
+      .shot{
+        border-radius:14px;
+        overflow:hidden;
+        border:1px solid var(--border);
+        background:rgba(255,255,255,.02);
+      }
+      .shot img{ width:100%; height:auto; display:block; }
+
+      article{
+        margin-top:18px;
+        line-height:1.9;
+        color:rgba(255,255,255,.82);
+        font-size:15px;
+      }
+      article a{ color:var(--accent); }
+      code{
+        background:rgba(255,255,255,.06);
+        padding:2px 6px;
+        border-radius:8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <div class="nav">
+        <a href="/">首页</a>
+        <a href="/poems/">诗歌</a>
+        <a href="/photos/" class="active">摄影</a>
+        <a href="/search/">搜索</a>
+      </div>
+
+      <div class="crumbs">
+        <a href="/photos/">摄影</a>
+        <span>›</span>
+        <span>{title}</span>
+      </div>
+
+      <h1>{title}</h1>
+      <div class="meta">
+        {dateStr}{item.data?.location ? ` · ${item.data.location}` : ""}
+      </div>
+
+      {Array.isArray(item.data?.tags) && item.data.tags.length > 0 ? (
+        <div class="tags">
+          {item.data.tags.map((t: string) => <span class="pill">{t}</span>)}
+        </div>
+      ) : null}
+
+      <div class="panel">
+        <div class="specs">
+          {item.data?.camera ? <div class="spec"><b>相机</b>：{item.data.camera}</div> : null}
+          {item.data?.lens ? <div class="spec"><b>镜头</b>：{item.data.lens}</div> : null}
+          {item.data?.settings?.focal ? <div class="spec"><b>焦距</b>：{item.data.settings.focal}</div> : null}
+          {item.data?.settings?.aperture ? <div class="spec"><b>光圈</b>：{item.data.settings.aperture}</div> : null}
+          {item.data?.settings?.shutter ? <div class="spec"><b>快门</b>：{item.data.settings.shutter}</div> : null}
+          {item.data?.settings?.iso ? <div class="spec"><b>ISO</b>：{item.data.settings.iso}</div> : null}
+        </div>
+
+        {photos.length === 0 ? (
+          <div class="note">
+            这条摄影记录暂时没有配置 <code>photos</code> 图片列表。<br />
+            你之后想加图时，在对应 md 的 frontmatter 写：
+            <pre style="white-space:pre-wrap;margin:10px 0 0;color:rgba(255,255,255,.75);">
+photos:
+  - /images/photos/xxx/01.jpg
+  - /images/photos/xxx/02.jpg
+            </pre>
+          </div>
+        ) : (
+          <div class="gallery">
+            {photos.map((src) => (
+              <div class="shot">
+                <img src={src} alt={title} loading="lazy" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <article>
+          <Content />
+        </article>
+      </div>
+    </div>
+  </body>
+</html>

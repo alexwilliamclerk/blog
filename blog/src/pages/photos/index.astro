@@ -1,0 +1,178 @@
+---
+import { getCollection } from "astro:content";
+
+let items: any[] = [];
+try {
+  items = await getCollection("photos");
+} catch (e) {
+  items = [];
+}
+
+items = items
+  .filter((p) => !p.data?.draft)
+  .sort((a, b) => (b.data?.date?.valueOf?.() ?? 0) - (a.data?.date?.valueOf?.() ?? 0));
+
+const total = items.length;
+---
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>摄影</title>
+
+    <style>
+      :root{
+        --bg:#0f1115;
+        --card:#151821;
+        --border:rgba(255,255,255,.08);
+        --text:#e6e6e6;
+        --muted:rgba(255,255,255,.55);
+        --accent:#7ef29a;
+      }
+      body{
+        margin:0;
+        background:var(--bg);
+        color:var(--text);
+        font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial;
+      }
+      .wrap{
+        max-width:1100px;
+        margin:0 auto;
+        padding:32px 20px 60px;
+      }
+      .nav{
+        display:flex;
+        gap:18px;
+        margin-bottom:36px;
+      }
+      .nav a{
+        color:var(--muted);
+        text-decoration:none;
+        font-size:14px;
+      }
+      .nav a.active{ color:var(--accent); }
+
+      h1{
+        margin:0 0 12px;
+        font-size:28px;
+      }
+      .desc{
+        color:var(--muted);
+        margin:0 0 28px;
+        font-size:14px;
+      }
+
+      .grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+        gap:20px;
+      }
+
+      .link{
+        text-decoration:none;
+        color:inherit;
+      }
+
+      .card{
+        background:var(--card);
+        border:1px solid var(--border);
+        border-radius:16px;
+        padding:16px;
+        transition:transform .25s ease,border-color .25s ease;
+      }
+      .card:hover{
+        border-color:var(--accent);
+        transform:translateY(-3px);
+      }
+
+      .title{
+        font-size:16px;
+        font-weight:600;
+        margin:0 0 6px;
+      }
+      .meta{
+        font-size:13px;
+        color:var(--muted);
+        margin:0 0 10px;
+      }
+      .summary{
+        font-size:14px;
+        color:var(--muted);
+        margin-top:6px;
+      }
+
+      .tags{
+        display:flex;
+        flex-wrap:wrap;
+        gap:6px;
+        margin-top:10px;
+      }
+      .pill{
+        font-size:12px;
+        padding:4px 10px;
+        border-radius:999px;
+        background:rgba(126,242,154,.08);
+        color:var(--accent);
+        border:1px solid rgba(126,242,154,.30);
+      }
+
+      .empty{
+        background:var(--card);
+        border:1px solid var(--border);
+        border-radius:16px;
+        padding:18px;
+        color:var(--muted);
+        line-height:1.7;
+      }
+      code{
+        background:rgba(255,255,255,.06);
+        padding:2px 6px;
+        border-radius:8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <div class="nav">
+        <a href="/">首页</a>
+        <a href="/poems/">诗歌</a>
+        <a href="/photos/" class="active">摄影</a>
+        <a href="/search/">搜索</a>
+      </div>
+
+      <h1>摄影</h1>
+      <p class="desc">共 {total} 条记录 · 按时间倒序</p>
+
+      {total === 0 ? (
+        <div class="empty">
+          暂无摄影内容。<br />
+          你可以先创建 <code>src/content/photos/first-shot.md</code>（不放图片也行），页面就会出现一条卡片。
+        </div>
+      ) : (
+        <div class="grid">
+          {items.map((p) => {
+            const title = p.data?.title ?? p.slug;
+            const dateStr = p.data?.date ? new Date(p.data.date).toISOString().slice(0, 10) : "";
+            const loc = p.data?.location ? ` · ${p.data.location}` : "";
+            return (
+              <a class="link" href={`/photos/${p.slug}/`}>
+                <div class="card">
+                  <div class="title">{title}</div>
+                  <div class="meta">{dateStr}{loc}</div>
+                  {p.data?.summary ? <div class="summary">{p.data.summary}</div> : null}
+                  {Array.isArray(p.data?.tags) && p.data.tags.length > 0 ? (
+                    <div class="tags">
+                      {p.data.tags.map((t: string) => <span class="pill">{t}</span>)}
+                    </div>
+                  ) : null}
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </body>
+</html>

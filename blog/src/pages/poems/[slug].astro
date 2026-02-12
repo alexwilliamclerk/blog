@@ -312,29 +312,38 @@ const formatDate = (iso: string) => {
         </div>
 
         <div class="footerNav">
-{prev?.slug ? (
-  <a class="navCard" href={`/poems/${prev.slug}/`}>
-    <div class="navHint">上一首（更新）</div>
-    <div class="navTitle">{prev?.data?.title ?? "（无标题）"}</div>
-  </a>
-) : (
-  <div class="navCard" aria-hidden="true">
-    <div class="navHint">上一首</div>
-    <div class="navTitle">没有了</div>
-  </div>
-)}
+{(() => {
+  const prevHref = prev?.slug ? `/poems/${prev.slug}/` : null;
+  const nextHref = next?.slug ? `/poems/${next.slug}/` : null;
 
-{next?.slug ? (
-  <a class="navCard" href={`/poems/${next.slug}/`}>
-    <div class="navHint">下一首（更旧）</div>
-    <div class="navTitle">{next?.data?.title ?? "（无标题）"}</div>
-  </a>
-) : (
-  <div class="navCard" aria-hidden="true">
-    <div class="navHint">下一首</div>
-    <div class="navTitle">没有了</div>
-  </div>
-)}
+  return (
+    <>
+      {prevHref ? (
+        <a class="navCard" href={prevHref}>
+          <div class="navHint">上一首（更新）</div>
+          <div class="navTitle">{prev?.data?.title ?? "无标题"}</div>
+        </a>
+      ) : (
+        <div class="navCard" aria-hidden="true">
+          <div class="navHint">上一首</div>
+          <div class="navTitle">没有了</div>
+        </div>
+      )}
+
+      {nextHref ? (
+        <a class="navCard" href={nextHref}>
+          <div class="navHint">下一首（更新）</div>
+          <div class="navTitle">{next?.data?.title ?? "无标题"}</div>
+        </a>
+      ) : (
+        <div class="navCard" aria-hidden="true">
+          <div class="navHint">下一首</div>
+          <div class="navTitle">没有了</div>
+        </div>
+      )}
+    </>
+  );
+})()}
         </div>
       </article>
     </main>

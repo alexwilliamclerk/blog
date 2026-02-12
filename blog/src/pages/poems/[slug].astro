@@ -1,113 +1,342 @@
 ---
+import type { CollectionEntry } from "astro:content";
 import { getCollection } from "astro:content";
 
 export async function getStaticPaths() {
   const poems = await getCollection("poems");
-  return poems.map((p) => ({
-    params: { slug: p.slug },
-    props: { poem: p },
-  }));
+  return poems.map((p) => ({ params: { slug: p.slug } }));
 }
 
-const { poem } = Astro.props;
+const { slug } = Astro.params;
+const poems = await getCollection("poems");
+
+// 当前
+const currentIndex = poems.findIndex((p) => p.slug === slug);
+if (currentIndex === -1) {
+  return new Response("Not found", { status: 404 });
+}
+
+const poem = poems[currentIndex];
 const { Content } = await poem.render();
+
+// 上一首 / 下一首（按 date 排序更合理；如果你没做排序，这里用原数组顺序）
+// 建议按 date 新→旧排序：
+const sorted = [...poems].sort((a, b) => {
+  const da = new Date(a.data.date).getTime();
+  const db = new Date(b.data.date).getTime();
+  return db - da;
+});
+const idx = sorted.findIndex((p) => p.slug === slug);
+const prev = idx > 0 ? sorted[idx - 1] : null; // 更新的上一首（更“新”）
+const next = idx < sorted.length - 1 ? sorted[idx + 1] : null; // 更“旧”
+
+const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
+const canonical = site ? `${site}/poems/${poem.slug}/` : undefined;
+
 const title = poem.data.title;
+const date = poem.data.date; // 建议 schema 里是 YYYY-MM-DD
+const tags: string[] = poem.data.tags ?? [];
+const description =
+  (poem.data.description as string | undefined) ??
+  `${title}｜${date}｜诗歌`;
+
+const formatDate = (iso: string) => {
+  // iso: 2024-12-04
+  // 显示成 2024-12-04（你要中文格式也可以再改）
+  return iso;
+};
 ---
 
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title}</title>
-    <meta name="description" content={title} />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+    <title>{title}｜诗歌</title>
+    <meta name="description" content={description} />
+    {canonical && <link rel="canonical" href={canonical} />}
+
+    <!-- 基础 SEO / 社交卡片 -->
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:title" content={`${title}｜诗歌`} />
+    <meta property="og:description" content={description} />
+    {canonical && <meta property="og:url" content={canonical} />}
+
+    <meta name="twitter:card" content="summary" />
+
     <style>
       :root{
-        --bg:#0b0f0d; --text:#e7efe9; --muted:#9fb3a7;
-        --line:rgba(255,255,255,.08); --brand:#8ee6b0;
+        --bg: #0b0f0c;
+        --panel: rgba(255,255,255,0.04);
+        --panel2: rgba(255,255,255,0.06);
+        --text: rgba(255,255,255,0.92);
+        --muted: rgba(255,255,255,0.65);
+        --line: rgba(255,255,255,0.10);
+        --accent: #7fe0b3; /* 浅绿色 */
+        --accent2:#5ccf9c;
+        --radius: 18px;
       }
-      *{box-sizing:border-box}
-      body{margin:0;font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC","Microsoft YaHei", sans-serif;
-        background: radial-gradient(1100px 700px at 20% -10%, rgba(142,230,176,.18), transparent 55%), var(--bg);
+
+      *{ box-sizing:border-box; }
+      body{
+        margin:0;
+        background: radial-gradient(1200px 800px at 10% 0%, rgba(127,224,179,0.08), transparent 55%),
+                    radial-gradient(900px 600px at 90% 10%, rgba(127,224,179,0.06), transparent 60%),
+                    var(--bg);
         color:var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
       }
-      a{color:inherit;text-decoration:none}
-      .wrap{max-width:760px;margin:0 auto;padding:22px 16px 70px}
-      .top{
-        display:flex;align-items:center;justify-content:space-between;
-        padding:10px 4px 18px;border-bottom:1px solid var(--line);
+
+      a{ color:inherit; text-decoration:none; }
+      .wrap{
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 20px 16px 56px;
       }
-      .brand{display:flex;align-items:center;gap:10px;font-weight:800}
-      .dot{width:10px;height:10px;border-radius:999px;background:var(--brand);box-shadow:0 0 18px rgba(142,230,176,.55)}
-      .pill{border:1px solid var(--line);background:rgba(255,255,255,.03);padding:10px 12px;border-radius:999px;font-size:14px}
-      .pill:hover{border-color:rgba(142,230,176,.35)}
-      h1{margin:18px 4px 8px;font-size:26px;letter-spacing:.2px}
-      .meta{margin:0 4px 18px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;font-size:13px}
-      .tag{border:1px solid var(--line);padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.02)}
-      article{
-        margin:0 4px;
-        border:1px solid var(--line);
-        border-radius:18px;
-        padding:18px 16px;
-        background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+
+      /* 顶部栏（像 IG 顶栏：左标题，中按钮） */
+      header.top{
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(10px);
+        background: linear-gradient(to bottom, rgba(11,15,12,0.85), rgba(11,15,12,0.55));
+        border-bottom: 1px solid var(--line);
+        padding: 14px 0;
       }
-      article :global(p){
-        margin:0 0 12px;
-        line-height:1.9;
-        font-size:16px;
-        white-space:pre-wrap;
+      .topInner{
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 0 16px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap: 12px;
       }
-      .tools{margin:14px 4px 0; display:flex; gap:10px; flex-wrap:wrap}
-      button{
-        cursor:pointer;
-        border:1px solid var(--line);
-        background:rgba(255,255,255,.03);
-        color:var(--text);
-        padding:10px 12px;border-radius:999px;
-        font-size:14px;
+      .brand{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
       }
-      button:hover{border-color:rgba(142,230,176,.35)}
-      .hint{color:var(--muted);font-size:12px;margin-left:6px}
+      .dot{
+        width:10px;height:10px;border-radius:999px;
+        background: var(--accent);
+        box-shadow: 0 0 18px rgba(127,224,179,0.35);
+      }
+      .nav{
+        display:flex;
+        gap:10px;
+        align-items:center;
+      }
+      .pill{
+        padding: 9px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255,255,255,0.03);
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .pill:hover{
+        border-color: rgba(127,224,179,0.35);
+        color: var(--text);
+      }
+
+      /* 帖子卡片 */
+      .post{
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+        border-radius: var(--radius);
+        overflow:hidden;
+        box-shadow: 0 16px 50px rgba(0,0,0,0.35);
+      }
+
+      .metaRow{
+        padding: 18px 18px 14px;
+        border-bottom: 1px solid var(--line);
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+      }
+
+      .titleRow{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap: 12px;
+      }
+
+      h1{
+        margin:0;
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      .subRow{
+        display:flex;
+        gap: 10px;
+        flex-wrap:wrap;
+        align-items:center;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .tag{
+        display:inline-flex;
+        gap:6px;
+        align-items:center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(127,224,179,0.22);
+        background: rgba(127,224,179,0.07);
+        color: rgba(127,224,179,0.95);
+      }
+
+      .content{
+        padding: 18px;
+      }
+
+      /* 让诗歌换行保留、同时排版更像“卡片正文” */
+      .poemBody :global(p){
+        margin: 0 0 14px;
+        color: rgba(255,255,255,0.88);
+      }
+      .poemBody{
+        white-space: pre-wrap; /* 保留换行 */
+        line-height: 1.85;
+        font-size: 16px;
+        letter-spacing: 0.2px;
+      }
+
+      /* 底部导航 */
+      .footerNav{
+        border-top: 1px solid var(--line);
+        padding: 14px 18px 16px;
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .navCard{
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255,255,255,0.03);
+        padding: 12px 12px;
+        min-height: 64px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        gap: 6px;
+      }
+      .navCard:hover{
+        border-color: rgba(127,224,179,0.35);
+      }
+      .navHint{
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .navTitle{
+        font-size: 14px;
+        color: var(--text);
+      }
+
+      .backRow{
+        margin-top: 14px;
+        display:flex;
+        justify-content:center;
+      }
+      .backBtn{
+        display:inline-flex;
+        align-items:center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(127,224,179,0.28);
+        background: rgba(127,224,179,0.10);
+        color: rgba(127,224,179,0.95);
+      }
+      .backBtn:hover{
+        background: rgba(127,224,179,0.14);
+      }
+
+      @media (max-width: 640px){
+        .footerNav{ grid-template-columns: 1fr; }
+        h1{ font-size: 20px; }
+      }
     </style>
   </head>
+
   <body>
-    <div class="wrap">
-      <header class="top">
-        <div class="brand"><span class="dot"></span><span>诗歌</span></div>
-        <nav style="display:flex;gap:10px">
-          <a class="pill" href="/poems">返回列表</a>
-          <a class="pill" href="/">首页</a>
+    <header class="top">
+      <div class="topInner">
+        <a class="brand" href="/">
+          <span class="dot"></span>
+          <span>诗歌</span>
+        </a>
+        <nav class="nav">
+          <a class="pill" href="/poems/">列表</a>
+          <a class="pill" href="/search/">搜索</a>
         </nav>
-      </header>
-
-      <h1>{title}</h1>
-      <div class="meta">
-        <span>{poem.data.date}</span>
-        {poem.data.tags.map((t) => <span class="tag">#{t}</span>)}
       </div>
+    </header>
 
-      <article>
-        <Content />
+    <main class="wrap">
+      <article class="post">
+        <div class="metaRow">
+          <div class="titleRow">
+            <h1>{title}</h1>
+          </div>
+
+          <div class="subRow">
+            <span>🗓 {formatDate(date)}</span>
+            {tags.length > 0 && (
+              <>
+                <span>·</span>
+                {tags.map((t) => <span class="tag">#{t}</span>)}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="poemBody poemBody">
+            <Content />
+          </div>
+
+          <div class="backRow">
+            <a class="backBtn" href="/poems/">← 返回诗歌列表</a>
+          </div>
+        </div>
+
+        <div class="footerNav">
+{prev?.slug ? (
+  <a class="navCard" href={`/poems/${prev.slug}/`}>
+    <div class="navHint">上一首（更新）</div>
+    <div class="navTitle">{prev?.data?.title ?? "（无标题）"}</div>
+  </a>
+) : (
+  <div class="navCard" aria-hidden="true">
+    <div class="navHint">上一首</div>
+    <div class="navTitle">没有了</div>
+  </div>
+)}
+
+{next?.slug ? (
+  <a class="navCard" href={`/poems/${next.slug}/`}>
+    <div class="navHint">下一首（更旧）</div>
+    <div class="navTitle">{next?.data?.title ?? "（无标题）"}</div>
+  </a>
+) : (
+  <div class="navCard" aria-hidden="true">
+    <div class="navHint">下一首</div>
+    <div class="navTitle">没有了</div>
+  </div>
+)}
+        </div>
       </article>
-
-      <div class="tools">
-        <button id="copy">复制全文</button>
-        <span class="hint" id="hint"></span>
-      </div>
-    </div>
-
-    <script>
-      const btn = document.getElementById("copy");
-      const hint = document.getElementById("hint");
-      btn?.addEventListener("click", async () => {
-        const text = document.querySelector("article")?.innerText || "";
-        try{
-          await navigator.clipboard.writeText(text.trim());
-          hint.textContent = "已复制";
-          setTimeout(()=> hint.textContent="", 1200);
-        }catch(e){
-          hint.textContent = "复制失败（浏览器权限）";
-        }
-      });
-    </script>
+    </main>
   </body>
 </html>

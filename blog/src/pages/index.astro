@@ -1,17 +1,175 @@
 ---
-
+const profile = {
+  name: "Alex",
+  bio: "写诗 / 摄影 / 记录",
+  stats: { poems: 100, photos: 100, series: 12 },
+};
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{profile.name} 的诗歌博客</title>
+    <meta name="description" content="诗歌与摄影的静态博客。" />
+    <style>
+      :root{
+        --bg:#0b0f0d;
+        --card:#0f1713;
+        --text:#e7efe9;
+        --muted:#9fb3a7;
+        --line:rgba(255,255,255,.08);
+        --brand:#8ee6b0; /* 浅绿色 */
+        --brand2:#5fd39a;
+        --radius:18px;
+      }
+      *{box-sizing:border-box}
+      body{
+        margin:0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC","Microsoft YaHei", sans-serif;
+        background: radial-gradient(1200px 800px at 20% -10%, rgba(142,230,176,.20), transparent 55%),
+                    radial-gradient(900px 700px at 90% 0%, rgba(95,211,154,.16), transparent 50%),
+                    var(--bg);
+        color:var(--text);
+      }
+      a{color:inherit;text-decoration:none}
+      .wrap{max-width:980px;margin:0 auto;padding:22px 16px 70px}
+      .topbar{
+        display:flex;align-items:center;justify-content:space-between;
+        padding:10px 4px 18px;border-bottom:1px solid var(--line);
+        position:sticky;top:0;background:linear-gradient(to bottom, rgba(11,15,13,.92), rgba(11,15,13,.72));
+        backdrop-filter: blur(10px); z-index:10;
+      }
+      .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+      .dot{width:10px;height:10px;border-radius:999px;background:var(--brand);box-shadow:0 0 18px rgba(142,230,176,.55)}
+      .actions{display:flex;gap:10px}
+      .pill{
+        border:1px solid var(--line);
+        background:rgba(255,255,255,.03);
+        padding:10px 12px;border-radius:999px;
+        color:var(--text); font-size:14px;
+      }
+      .pill:hover{border-color:rgba(142,230,176,.35)}
+      .hero{display:grid;grid-template-columns: 120px 1fr; gap:18px; padding:26px 4px}
+      .avatar{
+        width:110px;height:110px;border-radius:28px;
+        background:linear-gradient(135deg, rgba(142,230,176,.25), rgba(95,211,154,.10));
+        border:1px solid rgba(142,230,176,.25);
+        box-shadow: 0 18px 50px rgba(0,0,0,.35);
+        display:flex;align-items:center;justify-content:center;
+        font-weight:800;font-size:28px;color:rgba(231,239,233,.9);
+      }
+      .name{font-size:26px;font-weight:800;margin:0 0 6px}
+      .bio{color:var(--muted);margin:0 0 14px;line-height:1.6}
+      .stats{display:flex;gap:14px;flex-wrap:wrap}
+      .stat{
+        padding:10px 12px;border-radius:12px;
+        background:rgba(255,255,255,.03);border:1px solid var(--line);
+        min-width:120px;
+      }
+      .stat b{display:block;font-size:18px}
+      .stat span{color:var(--muted);font-size:13px}
+      .tabs{
+        display:flex;gap:10px;flex-wrap:wrap;
+        padding:8px 4px 18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+      }
+      .tab{
+        padding:10px 14px;border-radius:999px;
+        background:rgba(255,255,255,.03);border:1px solid var(--line);
+        font-size:14px;color:var(--text);
+      }
+      .tab.active{border-color:rgba(142,230,176,.5); box-shadow:0 0 0 3px rgba(142,230,176,.10) inset}
+      .grid{padding:22px 4px; display:grid; grid-template-columns: repeat(3, 1fr); gap:12px}
+      .card{
+        height:180px;border-radius:16px;
+        background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+        border:1px solid var(--line);
+        overflow:hidden; position:relative;
+      }
+      .card:before{
+        content:""; position:absolute; inset:0;
+        background: radial-gradient(520px 220px at 20% 10%, rgba(142,230,176,.16), transparent 55%);
+      }
+      .card .meta{
+        position:absolute; left:12px; right:12px; bottom:12px;
+        display:flex;align-items:flex-end;justify-content:space-between;gap:10px;
+      }
+      .title{font-weight:800}
+      .sub{color:var(--muted);font-size:12px}
+      @media (max-width:760px){
+        .hero{grid-template-columns: 92px 1fr}
+        .avatar{width:84px;height:84px;border-radius:22px}
+        .grid{grid-template-columns: repeat(2, 1fr)}
+        .card{height:160px}
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <header class="topbar">
+        <div class="brand">
+          <span class="dot"></span>
+          <span>{profile.name} · 博客</span>
+        </div>
+        <nav class="actions">
+          <a class="pill" href="/about">关于我</a>
+          <a class="pill" href="/friends">友链</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="avatar">A</div>
+        <div>
+          <h1 class="name">{profile.name}</h1>
+          <p class="bio">{profile.bio}</p>
+          <div class="stats">
+            <div class="stat"><b>{profile.stats.poems}+</b><span>诗歌</span></div>
+            <div class="stat"><b>{profile.stats.photos}+</b><span>摄影</span></div>
+            <div class="stat"><b>{profile.stats.series}+</b><span>系列</span></div>
+          </div>
+        </div>
+      </section>
+
+      <nav class="tabs">
+        <a class="tab active" href="/">精选</a>
+        <a class="tab" href="/poems">诗歌</a>
+        <a class="tab" href="/photos">摄影</a>
+        <a class="tab" href="/categories">分类</a>
+        <a class="tab" href="/search">搜索</a>
+      </nav>
+
+      <section class="grid">
+        <a class="card" href="/poems">
+          <div class="meta">
+            <div>
+              <div class="title">诗歌</div>
+              <div class="sub">最新 / 系列 / 分类</div>
+            </div>
+            <div class="sub">→</div>
+          </div>
+        </a>
+
+        <a class="card" href="/photos">
+          <div class="meta">
+            <div>
+              <div class="title">摄影</div>
+              <div class="sub">时间 / 地点 / 文字</div>
+            </div>
+            <div class="sub">→</div>
+          </div>
+        </a>
+
+        <a class="card" href="/series">
+          <div class="meta">
+            <div>
+              <div class="title">系列</div>
+              <div class="sub">诗歌系列 / 摄影系列</div>
+            </div>
+            <div class="sub">→</div>
+          </div>
+        </a>
+      </section>
+    </div>
+  </body>
 </html>

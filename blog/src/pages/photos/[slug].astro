@@ -24,6 +24,11 @@ const photos: string[] = Array.isArray(item.data?.photos) ? item.data.photos : [
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} · 摄影</title>
+    <meta data-pagefind-filter="type[content]" content="photo" />
+    <meta data-pagefind-meta="title[content]" content={title} />
+    <meta data-pagefind-meta="date[content]" content={dateStr} />
+
+    <meta data-pagefind-meta="tags[content]" content={Array.isArray(item.data?.tags) ? item.data.tags.join(", ") : ""} />
 
     <style>
       :root{

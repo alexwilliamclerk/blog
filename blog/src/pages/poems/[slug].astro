@@ -32,6 +32,8 @@ const next = idx < sorted.length - 1 ? sorted[idx + 1] : null; // 更“旧”
 
 const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
 const canonical = site ? `${site}/poems/${poem.slug}/` : undefined;
+const dateStr = poem?.data?.date ? new Date(poem.data.date).toISOString().slice(0, 10) : "";
+
 
 const title = poem.data.title;
 const date = poem.data.date; // 建议 schema 里是 YYYY-MM-DD
@@ -56,6 +58,12 @@ const formatDate = (iso: string) => {
     <title>{title}｜诗歌</title>
     <meta name="description" content={description} />
     {canonical && <link rel="canonical" href={canonical} />}
+
+    <meta data-pagefind-filter="type[content]" content="poem" />
+    <meta data-pagefind-meta="title[content]" content={title} />
+    <meta data-pagefind-meta="date[content]" content={dateStr} />
+
+    <meta data-pagefind-meta="tags[content]" content={tags.join(", ")} />
 
     <!-- 基础 SEO / 社交卡片 -->
     <meta property="og:type" content="article" />

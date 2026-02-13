@@ -1,11 +1,29 @@
 ---
+import { getCollection } from "astro:content";
+
+const poemsAll = await getCollection("poems");
+const photosAll = await getCollection("photos");
+
+const poems = poemsAll.filter((p) => !p.data?.draft);
+const photos = photosAll.filter((p) => !p.data?.draft);
+
+const poemCount = poems.length;
+const photoCount = photos.length;
+const poemsLabel = poemCount >= 100 ? "100+" : String(poemCount);
+const photosLabel = photoCount >= 100 ? "100+" : String(photoCount);
+
+
+const seriesSet = new Set<string>();
+for (const p of poems) if (p.data?.series) seriesSet.add(String(p.data.series));
+for (const p of photos) if (p.data?.series) seriesSet.add(String(p.data.series));
+const seriesCount = seriesSet.size;
+
 const profile = {
   name: "Alex",
   bio: "写诗 / 摄影 / 记录",
-  stats: { poems: 100, photos: 100, series: 12 },
+  stats: { poems: poemCount, photos: photoCount, series: seriesCount },
 };
 ---
-
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
@@ -124,9 +142,9 @@ const profile = {
           <h1 class="name">{profile.name}</h1>
           <p class="bio">{profile.bio}</p>
           <div class="stats">
-            <div class="stat"><b>{profile.stats.poems}+</b><span>诗歌</span></div>
-            <div class="stat"><b>{profile.stats.photos}+</b><span>摄影</span></div>
-            <div class="stat"><b>{profile.stats.series}+</b><span>系列</span></div>
+            <div class="stat"><b>{poemsLabel}</b><span>诗歌</span></div>
+            <div class="stat"><b>{photosLabel}</b><span>摄影</span></div>
+            <div class="stat"><b>{profile.stats.series}</b><span>系列</span></div>
           </div>
         </div>
       </section>

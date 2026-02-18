@@ -3,7 +3,6 @@ import { getCollection } from "astro:content";
 
 export async function getStaticPaths() {
   const poemsAll = await getCollection("poems");
-  // 统一排序逻辑：按日期倒序
   const sorted = poemsAll
     .filter((p) => !p.data?.draft)
     .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
@@ -12,7 +11,6 @@ export async function getStaticPaths() {
     params: { slug: poem.slug },
     props: { 
       poem,
-      // 获取相邻文章
       prev: index > 0 ? sorted[index - 1] : null,
       next: index < sorted.length - 1 ? sorted[index + 1] : null
     },
@@ -34,49 +32,57 @@ const { Content } = await poem.render();
         --bg: #f9f9f9;
         --card-bg: #ffffff;
         --text-main: #1a1a1a;
-        --text-sub: #888888;
+        --text-sub: #999999;
         --accent: #10b981;
         --border: #eeeeee;
-        --radius: 24px;
-        --shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
       }
-      body { background: var(--bg); color: var(--text-main); font-family: -apple-system, system-ui, sans-serif; line-height: 1.8; padding: 20px; }
-      .container { max-width: 700px; margin: 0 auto; padding-top: 40px; padding-bottom: 100px; }
-      .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 40px; }
-      .breadcrumb a { text-decoration: none; color: var(--text-main); font-weight: 700; }
-      .breadcrumb .slash { opacity: 0.2; }
-      .poem-wrapper { background: var(--card-bg); padding: 60px 50px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); }
-      header { margin-bottom: 50px; text-align: center; }
-      .title { font-family: 'Noto Serif SC', serif; font-size: 2.5rem; margin-bottom: 15px; }
-      .meta { font-size: 13px; color: var(--text-sub); display: flex; justify-content: center; gap: 15px; align-items: center; }
-      .article-content { font-family: 'Noto Serif SC', serif; font-size: 1.15rem; color: #333; white-space: pre-wrap; text-align: center; margin: 0 auto; max-width: 80%; }
+      body { background: var(--bg); color: var(--text-main); font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 20px; }
+      .container { max-width: 650px; margin: 0 auto; padding-top: 30px; padding-bottom: 60px; }
       
-      /* 对称导航样式 */
-      .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 50px; gap: 15px; }
-      .nav-link { flex: 1; padding: 15px; background: #fff; border: 1px solid var(--border); border-radius: 16px; text-decoration: none; color: var(--text-main); transition: 0.3s; display: flex; flex-direction: column; min-width: 0; }
-      .nav-link:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
-      .nav-label { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; }
-      .nav-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .back-center { padding: 10px 20px; background: #eee; border-radius: 30px; color: #666; text-decoration: none; font-size: 13px; white-space: nowrap; }
-      .empty-space { flex: 1; }
-      .text-right { text-align: right; }
+      .poem-wrapper { background: var(--card-bg); padding: 60px 40px; border-radius: 24px; border: 1px solid var(--border); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05); }
+      
+      /* 头部间距微调 */
+      header { text-align: center; margin-bottom: 30px; }
+      .title { font-family: 'Noto Serif SC', serif; font-size: 2.2rem; margin: 0 0 10px 0; }
+      .meta { font-size: 13px; color: var(--text-sub); } 
 
-      @media (max-width: 600px) { .poem-wrapper { padding: 40px 20px; } .title { font-size: 1.8rem; } .pagination { flex-direction: column; } .back-center { order: 3; width: 100%; text-align: center; } }
+      /* 正文核心逻辑：解决换行问题 */
+      .article-content {
+        font-family: 'Noto Serif SC', serif;
+        font-size: 1.15rem;
+        color: #333;
+        text-align: center;
+        line-height: 1.8;
+        /* 魔法指令：强制保留 Markdown 中的原始换行 */
+        white-space: pre-wrap; 
+      }
+
+      /* 既然保留了原始换行，段落间距就要适中，不能太大 */
+      .article-content :global(p) {
+        margin-top: 0;
+        margin-bottom: 1.5em; /* 这里控制大段落（空行后）的距离 */
+      }
+
+      /* 控制第一行诗离日期的距离 */
+      .article-content :global(p:first-child) {
+        margin-top: 20px; 
+      }
+
+      /* 对称导航 */
+      .pagination { display: flex; justify-content: space-between; margin-top: 40px; gap: 15px; }
+      .nav-link { flex: 1; padding: 18px; background: #fff; border: 1px solid var(--border); border-radius: 16px; text-decoration: none; color: var(--text-main); transition: 0.3s; }
+      .nav-link:hover { border-color: var(--accent); transform: translateY(-2px); }
+      .nav-label { font-size: 11px; color: var(--text-sub); display: block; margin-bottom: 4px; }
+      .nav-title { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+      .back-center { align-self: center; padding: 10px 20px; background: #eee; border-radius: 30px; font-size: 13px; text-decoration: none; color: #666; }
     </style>
   </head>
   <body>
     <div class="container">
-      <nav class="breadcrumb">
-        <a href="/">Alex</a> <span class="slash">/</span> <a href="/poems">诗歌</a> <span class="slash">/</span> <span style="color:var(--text-sub)">正文</span>
-      </nav>
-
       <article class="poem-wrapper">
         <header>
           <h1 class="title">{poem.data.title}</h1>
-          <div class="meta">
-            <span>{new Date(poem.data.date).toLocaleDateString('zh-CN')}</span>
-            {poem.data.series && <><span style="opacity:0.3">|</span><span style="color:var(--accent);font-weight:700"># {poem.data.series}</span></>}
-          </div>
+          <div class="meta">{new Date(poem.data.date).toLocaleDateString('zh-CN')}</div>
         </header>
         <div class="article-content"><Content /></div>
       </article>
@@ -87,16 +93,14 @@ const { Content } = await poem.render();
             <span class="nav-label">← 上一篇</span>
             <span class="nav-title">{prev.data.title}</span>
           </a>
-        ) : <div class="empty-space"></div>}
-
-        <a href="/poems" class="back-center">回列表</a>
-
+        ) : <div style="flex:1"></div>}
+        <a href="/poems" class="back-center">列表</a>
         {next ? (
-          <a href={`/poems/${next.slug}`} class="nav-link text-right">
+          <a href={`/poems/${next.slug}`} class="nav-link" style="text-align:right">
             <span class="nav-label">下一篇 →</span>
             <span class="nav-title">{next.data.title}</span>
           </a>
-        ) : <div class="empty-space"></div>}
+        ) : <div style="flex:1"></div>}
       </div>
     </div>
   </body>

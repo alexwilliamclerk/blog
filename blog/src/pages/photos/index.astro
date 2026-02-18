@@ -1,17 +1,22 @@
 ---
 import { getCollection } from "astro:content";
 
-// 获取所有摄影作品并按日期排序
+// 1. 获取所有摄影数据
 const allPhotos = await getCollection("photos");
-import { getCollection } from "astro:content";
 
-const sortedPhotos = photosAll.sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+// 2. 统一排序逻辑：按日期倒序排列（最新的在最前面）
+const sortedPhotos = allPhotos.sort((a, b) => {
+  return new Date(b.data.date).getTime() - new Date(a.data.date).getTime();
+});
+
+const pageTitle = "摄影";
 ---
+
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>摄影 · Alex</title>
+    <title>{pageTitle} · Alex</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap" rel="stylesheet">
     <style>
       :root {
@@ -43,31 +48,15 @@ const sortedPhotos = photosAll.sort((a, b) => new Date(b.data.date).getTime() - 
         padding-bottom: 80px; 
       }
 
-      /* 导航 */
-      .nav { 
-        display: flex; 
-        gap: 8px; 
-        margin-bottom: 40px; 
-        font-weight: 700; 
-        align-items: center; 
-      }
+      .nav { display: flex; gap: 8px; margin-bottom: 40px; font-weight: 700; align-items: center; }
       .nav a { color: var(--text-main); text-decoration: none; font-size: 14px; }
       .nav .slash { opacity: 0.2; }
 
       header { margin-bottom: 40px; }
-      h1 { 
-        font-family: 'Noto Serif SC', serif; 
-        font-size: 2.8rem; 
-        margin: 0 0 10px 0; 
-      }
+      h1 { font-family: 'Noto Serif SC', serif; font-size: 2.8rem; margin: 0 0 10px 0; }
       .count { color: var(--text-sub); font-size: 14px; }
 
-      /* 列表布局 */
-      .photo-list { 
-        display: flex; 
-        flex-direction: column; 
-        gap: 20px; 
-      }
+      .photo-list { display: flex; flex-direction: column; gap: 20px; }
 
       .photo-card {
         background: var(--card-bg);
@@ -79,28 +68,18 @@ const sortedPhotos = photosAll.sort((a, b) => new Date(b.data.date).getTime() - 
         display: flex;
         justify-content: space-between;
         align-items: center;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
         box-shadow: var(--shadow);
       }
 
       .photo-card:hover {
         border-color: var(--accent);
         transform: translateX(8px);
-        box-shadow: 0 10px 40px rgba(0,0,0,0.06);
       }
 
       .info { display: flex; flex-direction: column; gap: 6px; }
-      .title { 
-        font-size: 1.25rem; 
-        font-weight: 700; 
-        color: #333; 
-      }
-      .meta { 
-        font-size: 13px; 
-        color: var(--text-sub); 
-        display: flex; 
-        gap: 10px; 
-      }
+      .photo-title { font-size: 1.25rem; font-weight: 700; color: #333; }
+      .meta { font-size: 13px; color: var(--text-sub); display: flex; gap: 10px; }
 
       .tags { display: flex; gap: 8px; margin-top: 8px; }
       .tag { 
@@ -112,14 +91,7 @@ const sortedPhotos = photosAll.sort((a, b) => new Date(b.data.date).getTime() - 
         font-weight: 700;
       }
 
-      .arrow { 
-        font-size: 1.5rem; 
-        color: var(--accent); 
-        opacity: 0; 
-        transform: translateX(-10px); 
-        transition: 0.3s; 
-      }
-      .photo-card:hover .arrow { opacity: 1; transform: translateX(0); }
+      .arrow { font-size: 1.5rem; color: var(--accent); }
 
       @media (max-width: 600px) {
         h1 { font-size: 2rem; }
@@ -136,7 +108,7 @@ const sortedPhotos = photosAll.sort((a, b) => new Date(b.data.date).getTime() - 
       </nav>
 
       <header>
-        <h1>摄影</h1>
+        <h1>{pageTitle}</h1>
         <p class="count">共 {sortedPhotos.length} 组记录 · 按时间倒序</p>
       </header>
 
@@ -144,17 +116,19 @@ const sortedPhotos = photosAll.sort((a, b) => new Date(b.data.date).getTime() - 
         {sortedPhotos.map((photo) => (
           <a href={`/photos/${photo.slug}`} class="photo-card">
             <div class="info">
-              <span class="title">{photo.data.title}</span>
+              <span class="photo-title">{photo.data.title}</span>
               <div class="meta">
                 <span>{new Date(photo.data.date).toLocaleDateString('zh-CN')}</span>
                 <span>•</span>
-                <span>{photo.data.location}</span>
+                <span>{photo.data.location || "未知地点"}</span>
               </div>
-              <div class="tags">
-                {photo.data.tags?.map((tag: string) => (
-                  <span class="tag">{tag}</span>
-                ))}
-              </div>
+              {photo.data.tags && (
+                <div class="tags">
+                  {photo.data.tags.map((tag: string) => (
+                    <span class="tag">{tag}</span>
+                  ))}
+                </div>
+              )}
             </div>
             <span class="arrow">→</span>
           </a>

@@ -1,5 +1,5 @@
 ---
-// 保持逻辑部分为空，Pagefind 是客户端脚本
+// 逻辑部分为空，Pagefind 是客户端脚本
 ---
 
 <html lang="zh-CN">
@@ -17,8 +17,11 @@
         --accent: #10b981;
         --border: #eeeeee;
         --radius: 20px;
+        --shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
       }
 
+      * { box-sizing: border-box; }
+      
       body {
         margin: 0;
         background: var(--bg);
@@ -26,31 +29,37 @@
         font-family: -apple-system, system-ui, sans-serif;
         padding: 20px;
         line-height: 1.6;
+        overflow-x: hidden;
       }
 
-      .wrap { max-width: 700px; margin: 0 auto; padding-top: 40px; }
+      .wrap { 
+        max-width: 700px; 
+        margin: 0 auto; 
+        padding-top: 40px;
+        width: 100%;
+      }
 
       /* 导航 */
-      .nav { display: flex; gap: 10px; margin-bottom: 30px; font-weight: 700; align-items: center; }
+      .nav { display: flex; gap: 8px; margin-bottom: 30px; font-weight: 700; align-items: center; }
       .nav a { color: var(--text); text-decoration: none; font-size: 14px; }
       .nav .slash { opacity: 0.2; }
 
       /* 搜索框 */
       .search-container {
         background: var(--card);
-        padding: 30px;
+        padding: 35px;
         border-radius: var(--radius);
-        box-shadow: 0 4px 30px rgba(0,0,0,0.05);
+        box-shadow: var(--shadow);
         border: 1px solid var(--border);
         margin-bottom: 30px;
       }
 
-      h1 { font-family: 'Noto Serif SC', serif; font-size: 2rem; margin: 0 0 20px; }
+      h1 { font-family: 'Noto Serif SC', serif; font-size: 2.2rem; margin: 0 0 20px; }
 
       input#q {
         width: 100%;
         padding: 16px 20px;
-        border-radius: 12px;
+        border-radius: 14px;
         border: 1px solid var(--border);
         background: #f4f4f5;
         font-size: 16px;
@@ -63,32 +72,55 @@
         box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
       }
 
-      /* 结果展示 */
-      #hint { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
+      /* 结果列表 */
+      #list { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 15px; 
+        padding: 0;
+      }
       
-      /* 搜索结果项样式 */
-      #list { display: flex; flex-direction: column; gap: 12px; }
-      
-      /* 重点：这里使用基础选择器，防止 Astro 编译丢失样式 */
-      #list a {
+      #list :global(.res-card) {
         background: var(--card);
-        padding: 18px 24px;
-        border-radius: 16px;
+        padding: 22px 28px;
+        border-radius: 18px;
         text-decoration: none;
         color: inherit;
         border: 1px solid var(--border);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        transition: 0.2s;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        word-break: break-all;
+        animation: slideUp 0.4s ease-out forwards;
       }
-      #list a:hover {
+      
+      #list :global(.res-card:hover) {
         border-color: var(--accent);
-        transform: translateX(4px);
+        transform: translateX(8px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.04);
       }
-      .res-title { font-weight: 700; font-size: 1.1rem; }
-      .res-arrow { color: var(--accent); font-weight: bold; }
 
+      :global(.res-content) { display: flex; flex-direction: column; gap: 6px; }
+      :global(.res-tag) { 
+        font-size: 11px; 
+        color: var(--accent); 
+        font-weight: 800;
+        background: rgba(16, 185, 129, 0.08);
+        width: fit-content;
+        padding: 2px 8px;
+        border-radius: 6px;
+      }
+      :global(.res-title) { font-weight: 700; font-size: 1.15rem; color: #333; }
+      :global(.res-arrow) { color: var(--accent); font-weight: bold; font-size: 1.4rem; opacity: 0; transform: translateX(-10px); transition: 0.3s; }
+      :global(.res-card:hover .res-arrow) { opacity: 1; transform: translateX(0); }
+
+      #hint { text-align: center; color: var(--muted); padding: 50px 0; font-size: 14px; }
+
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
     </style>
   </head>
   <body>
@@ -101,15 +133,14 @@
 
       <div class="search-container">
         <h1>搜索</h1>
-        <input type="text" id="q" placeholder="输入关键词..." autocomplete="off" />
+        <input type="text" id="q" placeholder="输入关键词，搜索诗歌或摄影..." autocomplete="off" />
       </div>
 
-      <div id="hint">正在准备搜索索引...</div>
+      <div id="hint">正在连接搜索服务...</div>
       <div id="list"></div>
     </div>
 
     <script is:inline>
-      // 使用 is:inline 强制 Astro 不处理这段脚本，直接原样输出，最稳妥
       const $q = document.querySelector("#q");
       const $list = document.querySelector("#list");
       const $hint = document.querySelector("#hint");
@@ -120,9 +151,9 @@
         try {
           pagefind = await import("/pagefind/pagefind.js");
           await pagefind.options({ bundlePath: "/pagefind/" });
-          $hint.innerText = "请输入关键词开始搜索";
+          $hint.innerText = "输入关键词，探索空间里的碎片";
         } catch (e) {
-          $hint.innerText = "请先执行 npm run build 并在预览模式下测试搜索";
+          $hint.innerHTML = `<span style="color:#ff6b6b">搜索功能在生产环境下可用，请执行 npm run build。</span>`;
         }
       }
 
@@ -131,7 +162,7 @@
         if (!query) {
           $list.innerHTML = "";
           $hint.style.display = "block";
-          $hint.innerText = "请输入关键词开始搜索";
+          $hint.innerText = "输入关键词，探索空间里的碎片";
           return;
         }
 
@@ -141,19 +172,28 @@
         if (search.results.length === 0) {
           $list.innerHTML = "";
           $hint.style.display = "block";
-          $hint.innerText = "未找到匹配项";
+          $hint.innerText = "没有找到匹配的痕迹，换个词试试？";
           return;
         }
 
         $hint.style.display = "none";
         const results = await Promise.all(search.results.slice(0, 10).map(r => r.data()));
         
-        $list.innerHTML = results.map(r => `
-          <a href="${r.url}">
-            <span class="res-title">${r.meta.title || '无标题'}</span>
-            <span class="res-arrow">→</span>
-          </a>
-        `).join("");
+        $list.innerHTML = results.map(r => {
+          // 翻译并识别分类
+          const isPoem = r.url.includes('/poems/');
+          const typeLabel = isPoem ? '诗歌' : '摄影';
+          
+          return `
+            <a href="${r.url}" class="res-card">
+              <div class="res-content">
+                <span class="res-tag">${typeLabel}</span>
+                <span class="res-title">${r.meta.title || '无标题碎片'}</span>
+              </div>
+              <span class="res-arrow">→</span>
+            </a>
+          `;
+        }).join("");
       }
 
       $q.addEventListener("input", () => {
@@ -161,7 +201,6 @@
         window.searchTimer = setTimeout(doSearch, 300);
       });
 
-      // 初始化
       initPagefind();
     </script>
   </body>

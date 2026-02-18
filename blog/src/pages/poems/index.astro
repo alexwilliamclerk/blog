@@ -10,6 +10,16 @@ const poems = poemsAll
 // 提取所有系列用于顶部筛选展示
 const allSeries = [...new Set(poems.map(p => p.data.series).filter(Boolean))];
 
+import { getCollection } from "astro:content";
+
+const poemsAll = await getCollection("poems");
+// 过滤草稿并按日期倒序排序
+const poems = poemsAll
+  .filter((p) => !p.data?.draft)
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+
+const allSeries = [...new Set(poems.map(p => p.data.series).filter(Boolean))];
+
 const pageTitle = "诗歌";
 ---
 

@@ -1,188 +1,168 @@
+---
+// 保持逻辑部分为空，Pagefind 是客户端脚本
+---
+
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>搜索</title>
-
+    <title>搜索 · Alex</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap" rel="stylesheet">
     <style>
-      :root{
-        --bg:#0f1115;
-        --card:#151821;
-        --border:rgba(255,255,255,.08);
-        --text:#e6e6e6;
-        --muted:rgba(255,255,255,.55);
-        --accent:#7ef29a;
-      }
-      body{
-        margin:0;
-        background:var(--bg);
-        color:var(--text);
-        font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial;
-      }
-      .wrap{
-        max-width:1100px;
-        margin:0 auto;
-        padding:32px 20px 70px;
-      }
-      .nav{
-        display:flex;
-        gap:18px;
-        margin-bottom:36px;
-      }
-      .nav a{
-        color:var(--muted);
-        text-decoration:none;
-        font-size:14px;
-      }
-      .nav a.active{ color:var(--accent); }
-
-      h1{ margin:0 0 12px; font-size:28px; }
-      .desc{ color:var(--muted); margin:0 0 18px; font-size:14px; }
-
-      .input{
-        width:100%;
-        max-width:680px;
-        padding:12px 14px;
-        border-radius:14px;
-        border:1px solid var(--border);
-        background:rgba(255,255,255,.03);
-        color:var(--text);
-        outline:none;
-      }
-      .input:focus{
-        border-color:rgba(126,242,154,.6);
-        box-shadow:0 0 0 3px rgba(126,242,154,.12);
+      :root {
+        --bg: #f9f9f9;
+        --card: #ffffff;
+        --text: #1a1a1a;
+        --muted: #888888;
+        --accent: #10b981;
+        --border: #eeeeee;
+        --radius: 20px;
       }
 
-$q.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") searchNow();
-});
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, system-ui, sans-serif;
+        padding: 20px;
+        line-height: 1.6;
+      }
 
-      .list{ margin-top:18px; display:grid; gap:12px; }
-      .item{
-        display:block;
-        background:var(--card);
-        border:1px solid var(--border);
-        border-radius:16px;
-        padding:14px 16px;
-        text-decoration:none;
-        color:inherit;
+      .wrap { max-width: 700px; margin: 0 auto; padding-top: 40px; }
+
+      /* 导航 */
+      .nav { display: flex; gap: 10px; margin-bottom: 30px; font-weight: 700; align-items: center; }
+      .nav a { color: var(--text); text-decoration: none; font-size: 14px; }
+      .nav .slash { opacity: 0.2; }
+
+      /* 搜索框 */
+      .search-container {
+        background: var(--card);
+        padding: 30px;
+        border-radius: var(--radius);
+        box-shadow: 0 4px 30px rgba(0,0,0,0.05);
+        border: 1px solid var(--border);
+        margin-bottom: 30px;
       }
-      .item:hover{ border-color:var(--accent); }
-      .title{ font-weight:600; font-size:16px; }
-      .meta{ color:var(--muted); font-size:13px; margin-top:6px; }
-      .empty{
-        background:var(--card);
-        border:1px solid var(--border);
-        border-radius:16px;
-        padding:18px;
-        color:var(--muted);
-        line-height:1.7;
-        margin-top:18px;
+
+      h1 { font-family: 'Noto Serif SC', serif; font-size: 2rem; margin: 0 0 20px; }
+
+      input#q {
+        width: 100%;
+        padding: 16px 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #f4f4f5;
+        font-size: 16px;
+        outline: none;
+        transition: 0.3s;
       }
+      input#q:focus {
+        background: #fff;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+      }
+
+      /* 结果展示 */
+      #hint { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
+      
+      /* 搜索结果项样式 */
+      #list { display: flex; flex-direction: column; gap: 12px; }
+      
+      /* 重点：这里使用基础选择器，防止 Astro 编译丢失样式 */
+      #list a {
+        background: var(--card);
+        padding: 18px 24px;
+        border-radius: 16px;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: 0.2s;
+      }
+      #list a:hover {
+        border-color: var(--accent);
+        transform: translateX(4px);
+      }
+      .res-title { font-weight: 700; font-size: 1.1rem; }
+      .res-arrow { color: var(--accent); font-weight: bold; }
+
     </style>
   </head>
-
   <body>
     <div class="wrap">
-      <div class="nav">
-        <a href="/">首页</a>
-        <a href="/poems/">诗歌</a>
-        <a href="/photos/">摄影</a>
-        <a href="/search/" class="active">搜索</a>
+      <nav class="nav">
+        <a href="/">Alex</a>
+        <span class="slash">/</span>
+        <span style="color:var(--muted); font-weight:normal;">搜索</span>
+      </nav>
+
+      <div class="search-container">
+        <h1>搜索</h1>
+        <input type="text" id="q" placeholder="输入关键词..." autocomplete="off" />
       </div>
 
-      <h1>搜索</h1>
-      <p class="desc">支持全文搜索（Pagefind）。请在 preview/线上测试。</p>
-
-      <input id="q" class="input" placeholder="输入关键词（将搜索正文）" />
-
-      <div id="list" class="list"></div>
-      <div id="hint" class="empty" style="display:none;"></div>
-
-      <script>
-        const $q = document.getElementById("q");
-        const $list = document.getElementById("list");
-        const $hint = document.getElementById("hint");
-
-        function showHint(html) {
-          $hint.style.display = "block";
-          $hint.innerHTML = html;
-        }
-
-        function clearHint() {
-          $hint.style.display = "none";
-          $hint.innerHTML = "";
-        }
-
-async function ensurePagefind() {
-  if (window.pagefind) return;
-
-  await new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.type = "module";
-    // 关键：用内联 module 把 pagefind 导入并挂到 window.pagefind
-    s.textContent = `
-      import * as pf from "/pagefind/pagefind.js";
-      window.pagefind = pf;
-    `;
-    s.onload = resolve;
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-
-  if (!window.pagefind) throw new Error("pagefind still missing");
-}
-
-        function renderLinks(rows) {
-          if (rows.length === 0) {
-            $list.innerHTML = "";
-            showHint("没有结果。换个关键词试试。");
-            return;
-          }
-          clearHint();
-          $list.innerHTML = rows
-            .map(
-              (r) => `
-              <a class="item" href="${r.url}">
-                <div class="title">${r.title}</div>
-                <div class="meta">${r.url}</div>
-              </a>`
-            )
-            .join("");
-        }
-
-        async function searchNow() {
-          const q = $q.value.trim();
-          if (!q) {
-            $list.innerHTML = "";
-            showHint("输入关键词开始搜索（会搜索正文）。");
-            return;
-          }
-
-          await ensurePagefind();
-
-          const res = await window.pagefind.search(q);
-          const out = [];
-
-          // 先只做最小版：标题 + 链接
-          for (const r of res.results.slice(0, 20)) {
-            const data = await r.data();
-            const title = data?.meta?.title || data?.meta?.title?.content || data?.url || "Untitled";
-            out.push({ title, url: data.url });
-          }
-
-          renderLinks(out);
-        }
-
-        let t = null;
-        $q.addEventListener("input", () => {
-          clearTimeout(t);
-          t = setTimeout(searchNow, 200);
-        });
-
-        showHint("输入关键词开始搜索（会搜索正文）。");
-      </script>
+      <div id="hint">正在准备搜索索引...</div>
+      <div id="list"></div>
     </div>
+
+    <script is:inline>
+      // 使用 is:inline 强制 Astro 不处理这段脚本，直接原样输出，最稳妥
+      const $q = document.querySelector("#q");
+      const $list = document.querySelector("#list");
+      const $hint = document.querySelector("#hint");
+
+      let pagefind;
+
+      async function initPagefind() {
+        try {
+          pagefind = await import("/pagefind/pagefind.js");
+          await pagefind.options({ bundlePath: "/pagefind/" });
+          $hint.innerText = "请输入关键词开始搜索";
+        } catch (e) {
+          $hint.innerText = "请先执行 npm run build 并在预览模式下测试搜索";
+        }
+      }
+
+      async function doSearch() {
+        const query = $q.value.trim();
+        if (!query) {
+          $list.innerHTML = "";
+          $hint.style.display = "block";
+          $hint.innerText = "请输入关键词开始搜索";
+          return;
+        }
+
+        if (!pagefind) await initPagefind();
+        
+        const search = await pagefind.search(query);
+        if (search.results.length === 0) {
+          $list.innerHTML = "";
+          $hint.style.display = "block";
+          $hint.innerText = "未找到匹配项";
+          return;
+        }
+
+        $hint.style.display = "none";
+        const results = await Promise.all(search.results.slice(0, 10).map(r => r.data()));
+        
+        $list.innerHTML = results.map(r => `
+          <a href="${r.url}">
+            <span class="res-title">${r.meta.title || '无标题'}</span>
+            <span class="res-arrow">→</span>
+          </a>
+        `).join("");
+      }
+
+      $q.addEventListener("input", () => {
+        clearTimeout(window.searchTimer);
+        window.searchTimer = setTimeout(doSearch, 300);
+      });
+
+      // 初始化
+      initPagefind();
+    </script>
   </body>
 </html>

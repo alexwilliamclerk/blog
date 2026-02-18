@@ -1,359 +1,161 @@
 ---
-import type { CollectionEntry } from "astro:content";
 import { getCollection } from "astro:content";
 
+// 1. 生成所有诗歌的静态路径
 export async function getStaticPaths() {
   const poems = await getCollection("poems");
-  return poems.map((p) => ({ params: { slug: p.slug } }));
+  return poems.map((poem) => ({
+    params: { slug: poem.slug },
+    props: { poem },
+  }));
 }
 
-const { slug } = Astro.params;
-const poems = await getCollection("poems");
-
-// 当前
-const currentIndex = poems.findIndex((p) => p.slug === slug);
-if (currentIndex === -1) {
-  return new Response("Not found", { status: 404 });
-}
-
-const poem = poems[currentIndex];
+const { poem } = Astro.props;
 const { Content } = await poem.render();
 
-// 上一首 / 下一首（按 date 排序更合理；如果你没做排序，这里用原数组顺序）
-// 建议按 date 新→旧排序：
-const sorted = [...poems].sort((a, b) => {
-  const da = new Date(a.data.date).getTime();
-  const db = new Date(b.data.date).getTime();
-  return db - da;
-});
-const idx = sorted.findIndex((p) => p.slug === slug);
-const prev = idx > 0 ? sorted[idx - 1] : null; // 更新的上一首（更“新”）
-const next = idx < sorted.length - 1 ? sorted[idx + 1] : null; // 更“旧”
-
-const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
-const canonical = site ? `${site}/poems/${poem.slug}/` : undefined;
-const dateStr = poem?.data?.date ? new Date(poem.data.date).toISOString().slice(0, 10) : "";
-
-
-const title = poem.data.title;
-const date = poem.data.date; // 建议 schema 里是 YYYY-MM-DD
-const tags: string[] = poem.data.tags ?? [];
-const description =
-  (poem.data.description as string | undefined) ??
-  `${title}｜${date}｜诗歌`;
-
-const formatDate = (iso: string) => {
-  // iso: 2024-12-04
-  // 显示成 2024-12-04（你要中文格式也可以再改）
-  return iso;
-};
+const pageTitle = poem.data.title;
 ---
 
-<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-
-    <title>{title}｜诗歌</title>
-    <meta name="description" content={description} />
-    {canonical && <link rel="canonical" href={canonical} />}
-
-    <meta data-pagefind-filter="type[content]" content="poem" />
-    <meta data-pagefind-meta="title[content]" content={title} />
-    <meta data-pagefind-meta="date[content]" content={dateStr} />
-
-    <meta data-pagefind-meta="tags[content]" content={tags.join(", ")} />
-
-    <!-- 基础 SEO / 社交卡片 -->
-    <meta property="og:type" content="article" />
-    <meta property="og:locale" content="zh_CN" />
-    <meta property="og:title" content={`${title}｜诗歌`} />
-    <meta property="og:description" content={description} />
-    {canonical && <meta property="og:url" content={canonical} />}
-
-    <meta name="twitter:card" content="summary" />
-
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle} · 诗歌</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
     <style>
-      :root{
-        --bg: #0b0f0c;
-        --panel: rgba(255,255,255,0.04);
-        --panel2: rgba(255,255,255,0.06);
-        --text: rgba(255,255,255,0.92);
-        --muted: rgba(255,255,255,0.65);
-        --line: rgba(255,255,255,0.10);
-        --accent: #7fe0b3; /* 浅绿色 */
-        --accent2:#5ccf9c;
-        --radius: 18px;
+      :root {
+        --bg: #f9f9f9;
+        --card-bg: #ffffff;
+        --text-main: #1a1a1a;
+        --text-sub: #888888;
+        --accent: #10b981;
+        --border: #eeeeee;
+        --radius: 24px;
+        --shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
       }
 
-      *{ box-sizing:border-box; }
-      body{
-        margin:0;
-        background: radial-gradient(1200px 800px at 10% 0%, rgba(127,224,179,0.08), transparent 55%),
-                    radial-gradient(900px 600px at 90% 10%, rgba(127,224,179,0.06), transparent 60%),
-                    var(--bg);
-        color:var(--text);
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      body {
+        background: var(--bg);
+        color: var(--text-main);
+        font-family: -apple-system, system-ui, sans-serif;
+        line-height: 1.8;
+        padding: 20px;
       }
 
-      a{ color:inherit; text-decoration:none; }
-      .wrap{
-        max-width: 980px;
-        margin: 0 auto;
-        padding: 20px 16px 56px;
-      }
+      .container { max-width: 700px; margin: 0 auto; padding-top: 40px; padding-bottom: 100px; }
 
-      /* 顶部栏（像 IG 顶栏：左标题，中按钮） */
-      header.top{
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        backdrop-filter: blur(10px);
-        background: linear-gradient(to bottom, rgba(11,15,12,0.85), rgba(11,15,12,0.55));
-        border-bottom: 1px solid var(--line);
-        padding: 14px 0;
-      }
-      .topInner{
-        max-width: 980px;
-        margin: 0 auto;
-        padding: 0 16px;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap: 12px;
-      }
-      .brand{
-        display:flex;
-        align-items:center;
-        gap:10px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-      }
-      .dot{
-        width:10px;height:10px;border-radius:999px;
-        background: var(--accent);
-        box-shadow: 0 0 18px rgba(127,224,179,0.35);
-      }
-      .nav{
-        display:flex;
-        gap:10px;
-        align-items:center;
-      }
-      .pill{
-        padding: 9px 12px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: rgba(255,255,255,0.03);
-        color: var(--muted);
+      /* 顶部导航：Alex / 诗歌 / 标题 */
+      .breadcrumb { 
+        display: flex; 
+        align-items: center; 
+        gap: 8px; 
         font-size: 14px;
+        margin-bottom: 40px; 
       }
-      .pill:hover{
-        border-color: rgba(127,224,179,0.35);
-        color: var(--text);
-      }
+      .breadcrumb a { text-decoration: none; color: var(--text-main); font-weight: 700; }
+      .breadcrumb .slash { opacity: 0.2; }
+      .breadcrumb .current { color: var(--text-sub); }
 
-      /* 帖子卡片 */
-      .post{
-        margin-top: 18px;
-        border: 1px solid var(--line);
-        background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      /* 诗歌详情卡片 */
+      .poem-wrapper {
+        background: var(--card-bg);
+        padding: 60px 50px;
         border-radius: var(--radius);
-        overflow:hidden;
-        box-shadow: 0 16px 50px rgba(0,0,0,0.35);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
       }
 
-      .metaRow{
-        padding: 18px 18px 14px;
-        border-bottom: 1px solid var(--line);
-        display:flex;
-        flex-direction:column;
-        gap:10px;
+      header { margin-bottom: 50px; text-align: center; }
+      .title { 
+        font-family: 'Noto Serif SC', serif; 
+        font-size: 2.5rem; 
+        margin-bottom: 15px; 
+        letter-spacing: 1px;
       }
-
-      .titleRow{
-        display:flex;
-        align-items:flex-start;
-        justify-content:space-between;
-        gap: 12px;
+      .meta { 
+        font-size: 13px; 
+        color: var(--text-sub); 
+        display: flex; 
+        justify-content: center; 
+        gap: 15px;
+        align-items: center;
       }
+      .series-tag { color: var(--accent); font-weight: 700; }
 
-      h1{
-        margin:0;
-        font-size: 22px;
-        line-height: 1.2;
+      /* 诗歌正文样式 */
+      .article-content {
+        font-family: 'Noto Serif SC', serif;
+        font-size: 1.15rem;
+        color: #333;
+        white-space: pre-wrap; /* 保留诗歌的换行 */
+        text-align: center;    /* 诗歌通常居中对齐更有美感 */
+        margin: 0 auto;
+        max-width: 80%;
       }
+      
+      /* 适配 Markdown 渲染出的段落 */
+      .article-content p { margin-bottom: 1.5em; }
 
-      .subRow{
-        display:flex;
-        gap: 10px;
-        flex-wrap:wrap;
-        align-items:center;
-        color: var(--muted);
+      /* 底部返回按钮 */
+      .footer-nav {
+        margin-top: 50px;
+        display: flex;
+        justify-content: center;
+      }
+      .back-btn {
+        padding: 10px 25px;
+        border-radius: 30px;
+        background: #f0f0f0;
+        color: #666;
+        text-decoration: none;
         font-size: 14px;
+        transition: 0.3s;
+        border: 1px solid transparent;
+      }
+      .back-btn:hover {
+        background: var(--accent);
+        color: white;
+        transform: translateY(-2px);
       }
 
-      .tag{
-        display:inline-flex;
-        gap:6px;
-        align-items:center;
-        padding: 6px 10px;
-        border-radius: 999px;
-        border: 1px solid rgba(127,224,179,0.22);
-        background: rgba(127,224,179,0.07);
-        color: rgba(127,224,179,0.95);
-      }
-
-      .content{
-        padding: 18px;
-      }
-
-      /* 让诗歌换行保留、同时排版更像“卡片正文” */
-      .poemBody :global(p){
-        margin: 0 0 14px;
-        color: rgba(255,255,255,0.88);
-      }
-      .poemBody{
-        white-space: pre-wrap; /* 保留换行 */
-        line-height: 1.85;
-        font-size: 16px;
-        letter-spacing: 0.2px;
-      }
-
-      /* 底部导航 */
-      .footerNav{
-        border-top: 1px solid var(--line);
-        padding: 14px 18px 16px;
-        display:grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-      .navCard{
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: rgba(255,255,255,0.03);
-        padding: 12px 12px;
-        min-height: 64px;
-        display:flex;
-        flex-direction:column;
-        justify-content:center;
-        gap: 6px;
-      }
-      .navCard:hover{
-        border-color: rgba(127,224,179,0.35);
-      }
-      .navHint{
-        color: var(--muted);
-        font-size: 12px;
-      }
-      .navTitle{
-        font-size: 14px;
-        color: var(--text);
-      }
-
-      .backRow{
-        margin-top: 14px;
-        display:flex;
-        justify-content:center;
-      }
-      .backBtn{
-        display:inline-flex;
-        align-items:center;
-        gap: 10px;
-        padding: 10px 14px;
-        border-radius: 999px;
-        border: 1px solid rgba(127,224,179,0.28);
-        background: rgba(127,224,179,0.10);
-        color: rgba(127,224,179,0.95);
-      }
-      .backBtn:hover{
-        background: rgba(127,224,179,0.14);
-      }
-
-      @media (max-width: 640px){
-        .footerNav{ grid-template-columns: 1fr; }
-        h1{ font-size: 20px; }
+      @media (max-width: 600px) {
+        .poem-wrapper { padding: 40px 20px; }
+        .title { font-size: 1.8rem; }
       }
     </style>
   </head>
-
   <body>
-    <header class="top">
-      <div class="topInner">
-        <a class="brand" href="/">
-          <span class="dot"></span>
-          <span>诗歌</span>
-        </a>
-        <nav class="nav">
-          <a class="pill" href="/poems/">列表</a>
-          <a class="pill" href="/search/">搜索</a>
-        </nav>
-      </div>
-    </header>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="/">Alex</a>
+        <span class="slash">/</span>
+        <a href="/poems">诗歌</a>
+        <span class="slash">/</span>
+        <span class="current">{poem.data.title}</span>
+      </nav>
 
-    <main class="wrap">
-      <article class="post">
-        <div class="metaRow">
-          <div class="titleRow">
-            <h1>{title}</h1>
-          </div>
-
-          <div class="subRow">
-            <span>🗓 {formatDate(date)}</span>
-            {tags.length > 0 && (
+      <article class="poem-wrapper">
+        <header>
+          <h1 class="title">{poem.data.title}</h1>
+          <div class="meta">
+            <span>{new Date(poem.data.date).toLocaleDateString('zh-CN')}</span>
+            {poem.data.series && (
               <>
-                <span>·</span>
-                {tags.map((t) => <span class="tag">#{t}</span>)}
+                <span style="opacity:0.3">|</span>
+                <span class="series-tag"># {poem.data.series}</span>
               </>
             )}
           </div>
-        </div>
+        </header>
 
-<div class="content">
-  <div class="poemBody poemBody" data-pagefind-body>
-    <Content />
-  </div>
-
-  <div class="backRow" data-pagefind-ignore>
-    <a class="backBtn" href="/poems/">← 返回诗歌列表</a>
-  </div>
-</div>
-
-        <div class="footerNav">
-{(() => {
-  const prevHref = prev?.slug ? `/poems/${prev.slug}/` : null;
-  const nextHref = next?.slug ? `/poems/${next.slug}/` : null;
-
-  return (
-    <>
-      {prevHref ? (
-        <a class="navCard" href={prevHref}>
-          <div class="navHint">上一首（更新）</div>
-          <div class="navTitle">{prev?.data?.title ?? "无标题"}</div>
-        </a>
-      ) : (
-        <div class="navCard" aria-hidden="true">
-          <div class="navHint">上一首</div>
-          <div class="navTitle">没有了</div>
-        </div>
-      )}
-
-      {nextHref ? (
-        <a class="navCard" href={nextHref}>
-          <div class="navHint">下一首（更新）</div>
-          <div class="navTitle">{next?.data?.title ?? "无标题"}</div>
-        </a>
-      ) : (
-        <div class="navCard" aria-hidden="true">
-          <div class="navHint">下一首</div>
-          <div class="navTitle">没有了</div>
-        </div>
-      )}
-    </>
-  );
-})()}
+        <div class="article-content">
+          <Content />
         </div>
       </article>
-    </main>
+
+      <div class="footer-nav">
+        <a href="/poems" class="back-btn">← 返回诗歌列表</a>
+      </div>
+    </div>
   </body>
 </html>

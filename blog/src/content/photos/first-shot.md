@@ -1,10 +1,10 @@
 ---
 title: 第一组照片
-date: 2026-02-12
+date: 2025-06-15
 tags:
-  - 测试
-  - 夜景
-location: 广州
+  - 云南
+  - 蓝月谷
+location: 云南
 camera: Nikon Z5
 lens: Z 24-50mm f/4-6.3
 settings:

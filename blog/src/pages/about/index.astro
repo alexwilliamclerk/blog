@@ -1,0 +1,298 @@
+---
+const site = {
+  name: "Alex",
+  tagline: "写诗 / 摄影 / 记录",
+  intro: [
+    "这里是我的个人博客，主要放诗歌与摄影。",
+    "我喜欢把日常切成小片段：一段风、一束光、一次路过的心情。",
+    "网站是静态的，慢慢更新，不追热点。"
+  ],
+  now: [
+    "正在持续整理诗歌与摄影的「系列」",
+    "把站点打磨得更像一个能长期住下来的空间"
+  ],
+  contact: [
+    { label: "GitHub", value: "alexwilliamclerk", href: "https://github.com/alexwilliamclerk" },
+    // { label: "Email", value: "you@example.com", href: "mailto:you@example.com" },
+  ],
+};
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>关于我 - {site.name}</title>
+    <meta name="description" content="关于我：写诗、摄影、记录。" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+  </head>
+
+  <body>
+    <div class="wrap">
+      
+      <header class="top fade-in">
+        <div class="brand">
+          <span class="avatar-placeholder">{site.name[0]}</span>
+          <div class="brand-text">
+            <span class="name">{site.name}</span>
+            <span class="slash">/</span>
+            <span class="page-title">关于我</span>
+          </div>
+        </div>
+
+        <nav class="nav-links">
+          <a class="nav-item" href="/">首页</a>
+          <a class="nav-item" href="/links/">友链</a>
+          <a class="nav-item" href="/search/">搜索</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="card main-card fade-in delay-1">
+          <div class="header-group">
+            <h1 class="title">{site.name}</h1>
+            <p class="subtitle">{site.tagline}</p>
+          </div>
+
+          <div class="content-body">
+            {site.intro.map((t) => <p class="intro-text">{t}</p>)}
+          </div>
+
+          <div class="now-section">
+            <div class="section-label">
+              <span class="status-dot"></span> 我最近在做：
+            </div>
+            <div class="tags-wrapper">
+              {site.now.map((t) => <span class="tag">{t}</span>)}
+            </div>
+          </div>
+        </section>
+
+        <section class="contact-section fade-in delay-2">
+          <div class="section-label">联系 / 账号</div>
+          <div class="grid">
+            {site.contact.map((c) => (
+              <a class="contact-card" href={c.href} target="_blank" rel="noreferrer">
+                <div class="icon-box">↗</div>
+                <div class="meta">
+                  <div class="label">{c.label}</div>
+                  <div class="value">{c.value}</div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+
+      </main>
+
+      <footer class="fade-in delay-3">
+        &copy; {new Date().getFullYear()} {site.name}. All rights reserved.
+      </footer>
+    </div>
+  </body>
+</html>
+
+<style>
+  /* 全局变量：方便改色 */
+  :root {
+    --bg-color: #f9f9f9;
+    --card-bg: #ffffff;
+    --text-main: #333333;
+    --text-sub: #666666;
+    --accent: #3b82f6; /* 蓝色点缀 */
+    --border-color: #eaeaea;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.06);
+    --radius: 16px;
+  }
+
+  /* 基础重置 */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* 如果你想用衬线体体现“诗歌”感，可以把 font-family 改为 'Noto Serif SC', serif; */
+
+  .wrap {
+    width: 100%;
+    max-width: 640px; /* 限制最大宽度，阅读体验更好 */
+    margin: 0 auto;
+    padding-top: 40px;
+    padding-bottom: 60px;
+  }
+
+  /* 顶部导航 */
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    background: #333;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  .brand-text { font-size: 15px; font-weight: 600; color: var(--text-main); }
+  .brand-text .slash { margin: 0 4px; opacity: 0.3; }
+  .brand-text .page-title { color: var(--text-sub); font-weight: normal; }
+
+  .nav-links { display: flex; gap: 16px; }
+  .nav-item {
+    text-decoration: none;
+    color: var(--text-sub);
+    font-size: 14px;
+    transition: color 0.2s;
+  }
+  .nav-item:hover { color: var(--text-main); text-decoration: underline; text-underline-offset: 4px; }
+
+  /* 卡片通用样式 */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 32px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* 主卡片特定样式 */
+  .title { font-size: 32px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .subtitle { color: var(--text-sub); margin-bottom: 24px; font-size: 16px; }
+  
+  .content-body { margin-bottom: 32px; }
+  .intro-text { margin-bottom: 12px; font-size: 16px; color: #444; }
+
+  /* "最近在做" */
+  .now-section { 
+    background: #f4f4f5; 
+    padding: 16px; 
+    border-radius: 12px; 
+  }
+  
+  .section-label {
+    font-size: 12px;
+    color: var(--text-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 8px; 
+    height: 8px; 
+    background: #10b981; 
+    border-radius: 50%; 
+    display: inline-block;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  }
+
+  .tags-wrapper { display: flex; flex-wrap: wrap; gap: 8px; }
+  
+  .tag {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.05);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #555;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+
+  /* 联系方式网格 */
+  .contact-section { margin-top: 40px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+
+  .contact-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card-bg);
+    padding: 16px;
+    border-radius: 12px;
+    text-decoration: none;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .contact-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: transparent;
+  }
+
+  .contact-card .icon-box {
+    width: 36px; 
+    height: 36px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #888;
+  }
+
+  .contact-card .meta .label { font-size: 12px; color: var(--text-sub); }
+  .contact-card .meta .value { font-size: 14px; font-weight: 600; color: var(--text-main); }
+
+  footer {
+    margin-top: 60px;
+    text-align: center;
+    font-size: 12px;
+    color: #999;
+  }
+
+  /* 简单的入场动画 */
+  .fade-in {
+    opacity: 0;
+    animation: fadeInUp 0.6s ease forwards;
+  }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 移动端适配 */
+  @media (max-width: 600px) {
+    .title { font-size: 24px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>

@@ -1,193 +1,185 @@
 ---
 import { getCollection } from "astro:content";
 
+// 1. 获取内容数据
 const poemsAll = await getCollection("poems");
 const photosAll = await getCollection("photos");
 
+// 过滤掉草稿
 const poems = poemsAll.filter((p) => !p.data?.draft);
 const photos = photosAll.filter((p) => !p.data?.draft);
 
-const poemCount = poems.length;
-const photoCount = photos.length;
-const poemsLabel = poemCount >= 100 ? "100+" : String(poemCount);
-const photosLabel = photoCount >= 100 ? "100+" : String(photoCount);
-
-
-const seriesSet = new Set<string>();
-for (const p of poems) if (p.data?.series) seriesSet.add(String(p.data.series));
-for (const p of photos) if (p.data?.series) seriesSet.add(String(p.data.series));
-const seriesCount = seriesSet.size;
+// 统计逻辑
+const seriesSet = new Set();
+poems.forEach(p => p.data?.series && seriesSet.add(p.data.series));
+photos.forEach(p => p.data?.series && seriesSet.add(p.data.series));
 
 const profile = {
   name: "Alex",
-  bio: "写诗 / 摄影 / 记录",
-  stats: { poems: poemCount, photos: photoCount, series: seriesCount },
+  tagline: "写诗 / 摄影 / 记录",
+  stats: [
+    { label: "诗歌", count: poems.length },
+    { label: "摄影", count: photos.length },
+    { label: "系列", count: seriesSet.size }
+  ]
 };
+
+// 合并最新的内容用于首页展示
+const latestContent = [
+  ...poems.map(p => ({ ...p, type: 'poems', typeLabel: '诗歌' })),
+  ...photos.map(p => ({ ...p, type: 'photos', typeLabel: '摄影' }))
+].sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()).slice(0, 6);
 ---
+
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{profile.name} 的诗歌博客</title>
-    <meta name="description" content="诗歌与摄影的静态博客。" />
+    <title>{profile.name} · 首页</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap" rel="stylesheet">
     <style>
-      :root{
-        --bg:#0b0f0d;
-        --card:#0f1713;
-        --text:#e7efe9;
-        --muted:#9fb3a7;
-        --line:rgba(255,255,255,.08);
-        --brand:#8ee6b0; /* 浅绿色 */
-        --brand2:#5fd39a;
-        --radius:18px;
+      :root {
+        --bg: #f9f9f9;          /* 浅灰色背景  */
+        --card-bg: #ffffff;      /* 纯白卡片  */
+        --text-main: #1a1a1a;    /* 深色主文字  */
+        --text-sub: #666666;     /* 灰色副文字  */
+        --accent: #10b981;       /* 绿色点缀 [cite: 81] */
+        --border: #eeeeee;       /* 边框色  */
+        --radius: 20px;          /* 圆角 [cite: 61] */
+        --shadow: 0 4px 20px rgba(0, 0, 0, 0.04); /* 柔和阴影 [cite: 60] */
       }
-      *{box-sizing:border-box}
-      body{
-        margin:0;
-        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC","Microsoft YaHei", sans-serif;
-        background: radial-gradient(1200px 800px at 20% -10%, rgba(142,230,176,.20), transparent 55%),
-                    radial-gradient(900px 700px at 90% 0%, rgba(95,211,154,.16), transparent 50%),
-                    var(--bg);
-        color:var(--text);
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background: var(--bg);
+        color: var(--text-main);
+        font-family: -apple-system, system-ui, sans-serif;
+        line-height: 1.6;
+        padding: 20px;
       }
-      a{color:inherit;text-decoration:none}
-      .wrap{max-width:980px;margin:0 auto;padding:22px 16px 70px}
-      .topbar{
-        display:flex;align-items:center;justify-content:space-between;
-        padding:10px 4px 18px;border-bottom:1px solid var(--line);
-        position:sticky;top:0;background:linear-gradient(to bottom, rgba(11,15,13,.92), rgba(11,15,13,.72));
-        backdrop-filter: blur(10px); z-index:10;
+
+      .container { max-width: 700px; margin: 0 auto; padding-top: 40px; }
+
+      /* 顶部导航 [cite: 67] */
+      header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+      .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+      .avatar-sm { width: 30px; height: 30px; background: #333; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+      .nav-links { display: flex; gap: 15px; }
+      .nav-item { text-decoration: none; color: var(--text-sub); font-size: 14px; }
+
+      /* 主卡片 [cite: 74, 75] */
+      .main-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 35px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+        margin-bottom: 25px;
       }
-      .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
-      .dot{width:10px;height:10px;border-radius:999px;background:var(--brand);box-shadow:0 0 18px rgba(142,230,176,.55)}
-      .actions{display:flex;gap:10px}
-      .pill{
-        border:1px solid var(--line);
-        background:rgba(255,255,255,.03);
-        padding:10px 12px;border-radius:999px;
-        color:var(--text); font-size:14px;
+      .title { font-family: 'Noto Serif SC', serif; font-size: 2.2rem; margin-bottom: 5px; }
+      .tagline { color: var(--text-sub); margin-bottom: 25px; }
+
+      /* 修正后的横向统计样式 [cite: 79, 83] */
+      .stats-row {
+        background: #f4f4f5; /* 浅灰底盒 [cite: 79] */
+        padding: 15px 20px;
+        border-radius: 14px;
+        display: flex;
+        gap: 20px;
+        align-items: center;
       }
-      .pill:hover{border-color:rgba(142,230,176,.35)}
-      .hero{display:grid;grid-template-columns: 120px 1fr; gap:18px; padding:26px 4px}
-      .avatar{
-        width:110px;height:110px;border-radius:28px;
-        background:linear-gradient(135deg, rgba(142,230,176,.25), rgba(95,211,154,.10));
-        border:1px solid rgba(142,230,176,.25);
-        box-shadow: 0 18px 50px rgba(0,0,0,.35);
-        display:flex;align-items:center;justify-content:center;
-        font-weight:800;font-size:28px;color:rgba(231,239,233,.9);
+      .status-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1); }
+      .stat-item { 
+        font-size: 14px; 
+        color: #555; 
+        display: flex; 
+        align-items: center; 
+        gap: 5px; 
       }
-      .name{font-size:26px;font-weight:800;margin:0 0 6px}
-      .bio{color:var(--muted);margin:0 0 14px;line-height:1.6}
-      .stats{display:flex;gap:14px;flex-wrap:wrap}
-      .stat{
-        padding:10px 12px;border-radius:12px;
-        background:rgba(255,255,255,.03);border:1px solid var(--line);
-        min-width:120px;
+      .stat-item b { color: var(--text-main); font-weight: 700; }
+
+      /* 分类标签页 */
+      .tabs { display: flex; gap: 10px; margin: 35px 0 20px; }
+      .tab {
+        padding: 7px 18px; border-radius: 20px; background: #eee; color: #777;
+        text-decoration: none; font-size: 13px; font-weight: 600;
       }
-      .stat b{display:block;font-size:18px}
-      .stat span{color:var(--muted);font-size:13px}
-      .tabs{
-        display:flex;gap:10px;flex-wrap:wrap;
-        padding:8px 4px 18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+      .tab.active { background: var(--accent); color: white; }
+
+      /* 文章列表 [cite: 86] */
+      .post-list { display: flex; flex-direction: column; gap: 15px; }
+      .post-card {
+        background: var(--card-bg);
+        padding: 20px 25px;
+        border-radius: 16px;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: 0.2s;
       }
-      .tab{
-        padding:10px 14px;border-radius:999px;
-        background:rgba(255,255,255,.03);border:1px solid var(--line);
-        font-size:14px;color:var(--text);
-      }
-      .tab.active{border-color:rgba(142,230,176,.5); box-shadow:0 0 0 3px rgba(142,230,176,.10) inset}
-      .grid{padding:22px 4px; display:grid; grid-template-columns: repeat(3, 1fr); gap:12px}
-      .card{
-        height:180px;border-radius:16px;
-        background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-        border:1px solid var(--line);
-        overflow:hidden; position:relative;
-      }
-      .card:before{
-        content:""; position:absolute; inset:0;
-        background: radial-gradient(520px 220px at 20% 10%, rgba(142,230,176,.16), transparent 55%);
-      }
-      .card .meta{
-        position:absolute; left:12px; right:12px; bottom:12px;
-        display:flex;align-items:flex-end;justify-content:space-between;gap:10px;
-      }
-      .title{font-weight:800}
-      .sub{color:var(--muted);font-size:12px}
-      @media (max-width:760px){
-        .hero{grid-template-columns: 92px 1fr}
-        .avatar{width:84px;height:84px;border-radius:22px}
-        .grid{grid-template-columns: repeat(2, 1fr)}
-        .card{height:160px}
+      .post-card:hover { border-color: var(--accent); transform: translateX(5px); box-shadow: var(--shadow); }
+      .post-info .type { font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 4px; display: block; }
+      .post-info .post-title { font-size: 1.1rem; font-weight: 600; }
+      .post-meta { text-align: right; color: #999; font-size: 12px; }
+
+      @media (max-width: 500px) {
+        .stats-row { flex-wrap: wrap; gap: 10px; }
       }
     </style>
   </head>
-
   <body>
-    <div class="wrap">
-      <header class="topbar">
-        <div class="brand">
-          <span class="dot"></span>
-          <span>{profile.name} · 博客</span>
+    <div class="container">
+      <header>
+        <div class="logo">
+          <div class="avatar-sm">A</div>
+          <span>{profile.name} <span style="font-weight:normal; opacity:0.3; margin:0 4px;">/</span> 首页</span>
         </div>
-        <nav class="actions">
-          <a class="pill" href="/about">关于我</a>
-          <a class="pill" href="/friends">友链</a>
+        <nav class="nav-links">
+          <a href="/about" class="nav-item">关于</a>
+          <a href="/links" class="nav-item">友链</a>
+          <a href="/search" class="nav-item">搜索</a>
         </nav>
       </header>
 
-      <section class="hero">
-        <div class="avatar">A</div>
-        <div>
-          <h1 class="name">{profile.name}</h1>
-          <p class="bio">{profile.bio}</p>
-          <div class="stats">
-            <div class="stat"><b>{poemsLabel}</b><span>诗歌</span></div>
-            <div class="stat"><b>{photosLabel}</b><span>摄影</span></div>
-            <div class="stat"><b>{profile.stats.series}</b><span>系列</span></div>
+      <main>
+        <section class="main-card">
+          <h1 class="title">{profile.name}</h1>
+          <p class="tagline">{profile.tagline}</p>
+          
+          <div class="stats-row">
+            <span class="status-dot"></span>
+            <span style="font-size:12px; color:#999; margin-right:10px;">站点统计</span>
+            {profile.stats.map(s => (
+              <div class="stat-item">{s.label}: <b>{s.count}</b></div>
+            ))}
           </div>
+        </section>
+
+        <nav class="tabs">
+          <a href="/" class="tab active">最近更新</a>
+          <a href="/poems" class="tab">诗歌</a>
+          <a href="/photos" class="tab">摄影</a>
+        </nav>
+
+        <div class="post-list">
+          {latestContent.map(item => (
+            <a href={`/${item.type}/${item.slug}`} class="post-card">
+              <div class="post-info">
+                <span class="type">{item.typeLabel}</span>
+                <div class="post-title">{item.data.title}</div>
+              </div>
+              <div class="post-meta">
+                <div>{new Date(item.data.date).toLocaleDateString('zh-CN')}</div>
+                <div style="color:var(--accent); margin-top:4px;">→</div>
+              </div>
+            </a>
+          ))}
         </div>
-      </section>
-
-      <nav class="tabs">
-        <a class="tab active" href="/">精选</a>
-        <a class="tab" href="/poems">诗歌</a>
-        <a class="tab" href="/photos">摄影</a>
-        <a class="tab" href="/categories">分类</a>
-        <a class="tab" href="/search">搜索</a>
-      </nav>
-
-      <section class="grid">
-        <a class="card" href="/poems">
-          <div class="meta">
-            <div>
-              <div class="title">诗歌</div>
-              <div class="sub">最新 / 系列 / 分类</div>
-            </div>
-            <div class="sub">→</div>
-          </div>
-        </a>
-
-        <a class="card" href="/photos">
-          <div class="meta">
-            <div>
-              <div class="title">摄影</div>
-              <div class="sub">时间 / 地点 / 文字</div>
-            </div>
-            <div class="sub">→</div>
-          </div>
-        </a>
-
-<a class="card" href="/poems/first-poem">
-  <div class="meta">
-    <div>
-      <div class="title">最新诗歌</div>
-      <div class="sub">自由的风 · 2024-12-04</div>
-    </div>
-    <div class="sub">→</div>
-  </div>
-</a>
-      </section>
+      </main>
     </div>
   </body>
 </html>

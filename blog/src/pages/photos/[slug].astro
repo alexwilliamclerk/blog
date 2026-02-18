@@ -12,7 +12,7 @@ export async function getStaticPaths() {
 const { photo } = Astro.props;
 const { Content } = await photo.render();
 
-// 根据你的 first-shot.md 结构进行解构
+// 解构数据 [cite: 108]
 const { 
   title, 
   date, 
@@ -42,73 +42,130 @@ const {
         --shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
       }
 
+      * { box-sizing: border-box; }
+
       body {
         background: var(--bg);
         color: var(--text-main);
         font-family: -apple-system, system-ui, sans-serif;
         line-height: 1.6;
         padding: 20px;
+        margin: 0;
       }
 
-      .container { max-width: 800px; margin: 0 auto; padding-top: 40px; padding-bottom: 80px; }
+      .container { 
+        max-width: 800px; 
+        margin: 0 auto; 
+        padding-top: 40px; 
+        padding-bottom: 80px; 
+      }
 
-      /* 面包屑导航 */
-      .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 30px; font-weight: 700; }
+      /* 面包屑导航 [cite: 114, 115] */
+      .breadcrumb { 
+        display: flex; 
+        align-items: center; 
+        gap: 8px; 
+        font-size: 14px; 
+        margin-bottom: 30px; 
+        font-weight: 700; 
+      }
       .breadcrumb a { text-decoration: none; color: var(--text-main); }
       .breadcrumb .slash { opacity: 0.2; }
 
-      /* 头部信息 */
+      /* 头部信息 [cite: 118, 119] */
       header { margin-bottom: 40px; }
-      .title { font-family: 'Noto Serif SC', serif; font-size: 2.2rem; margin-bottom: 10px; }
-      .meta-info { color: var(--text-sub); font-size: 14px; display: flex; gap: 15px; }
+      .title { 
+        font-family: 'Noto Serif SC', serif; 
+        font-size: 2.5rem; 
+        margin-bottom: 10px; 
+        font-weight: 700;
+      }
+      .meta-info { 
+        color: var(--text-sub); 
+        font-size: 14px; 
+        display: flex; 
+        gap: 15px; 
+      }
 
-      /* EXIF 参数卡片 */
-      .exif-grid {
+      /* EXIF 参数大容器 [cite: 121, 122] */
+      .exif-container {
         background: #f4f4f5;
         padding: 25px;
         border-radius: var(--radius);
+        margin-bottom: 40px;
+      }
+
+      .exif-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
-        margin-bottom: 40px;
       }
+
       .exif-item {
         background: #fff;
-        padding: 12px 16px;
-        border-radius: 12px;
-        border: 1px solid rgba(0,0,0,0.03);
+        padding: 14px 18px;
+        border-radius: 14px;
+        border: 1px solid rgba(0,0,0,0.02);
         display: flex;
         justify-content: space-between;
+        align-items: center;
         font-size: 13px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.02);
       }
-      .exif-label { color: #999; }
+
+      .exif-label { color: #999; font-weight: 500; }
       .exif-value { font-weight: 600; color: #444; }
 
-      /* 图片展示 */
-      .photo-gallery { display: flex; flex-direction: column; gap: 24px; margin-bottom: 40px; }
+      /* 图片展示 [cite: 126, 127] */
+      .photo-gallery { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 24px; 
+        margin-bottom: 40px; 
+      }
       .photo-gallery img {
         width: 100%;
-        border-radius: 12px;
+        border-radius: 16px;
         box-shadow: var(--shadow);
+        display: block;
       }
 
-      /* 拍摄笔记 */
+      /* 拍摄笔记 [cite: 128, 129] */
       .notes {
         background: var(--card-bg);
-        padding: 30px;
+        padding: 35px;
         border-radius: var(--radius);
         border: 1px solid var(--border);
         font-size: 15px;
-        color: #555;
+        color: #444;
+        box-shadow: var(--shadow);
       }
-      .notes-title { font-size: 12px; color: var(--accent); font-weight: 800; text-transform: uppercase; margin-bottom: 15px; display: block; letter-spacing: 1px; }
+      .notes-title { 
+        font-size: 12px; 
+        color: var(--accent); 
+        font-weight: 800; 
+        text-transform: uppercase; 
+        margin-bottom: 20px; 
+        display: block;
+        letter-spacing: 1.5px; 
+      }
+      
+      .notes :global(p) { margin-bottom: 1rem; }
 
-      .back-nav { text-align: center; margin-top: 50px; }
-      .back-link { color: var(--text-sub); text-decoration: none; font-size: 14px; transition: 0.3s; }
-      .back-link:hover { color: var(--accent); }
+      .back-nav { text-align: center; margin-top: 60px; }
+      .back-link { 
+        color: var(--text-sub); 
+        text-decoration: none; 
+        font-size: 14px; 
+        padding: 10px 20px;
+        border-radius: 12px;
+        transition: 0.3s;
+      }
+      .back-link:hover { color: var(--accent); background: #fff; }
 
       @media (max-width: 600px) {
         .exif-grid { grid-template-columns: 1fr; }
+        .title { font-size: 1.8rem; }
       }
     </style>
   </head>
@@ -119,7 +176,7 @@ const {
         <span class="slash">/</span>
         <a href="/photos">摄影</a>
         <span class="slash">/</span>
-        <span style="font-weight:normal; color:#999;">{title}</span>
+        <span style="font-weight:normal; color:var(--text-sub);">正文</span>
       </nav>
 
       <main>
@@ -132,14 +189,16 @@ const {
           </div>
         </header>
 
-        <section class="exif-grid">
-          <div class="exif-item"><span class="exif-label">相机</span><span class="exif-value">{camera || '--'}</span></div>
-          <div class="exif-item"><span class="exif-label">镜头</span><span class="exif-value">{lens || '--'}</span></div>
-          <div class="exif-item"><span class="exif-label">焦距</span><span class="exif-value">{settings.focal || '--'}</span></div>
-          <div class="exif-item"><span class="exif-label">光圈</span><span class="exif-value">{settings.aperture || '--'}</span></div>
-          <div class="exif-item"><span class="exif-label">快门</span><span class="exif-value">{settings.shutter || '--'}</span></div>
-          <div class="exif-item"><span class="exif-label">ISO</span><span class="exif-value">{settings.iso || '--'}</span></div>
-        </section>
+        <div class="exif-container">
+          <div class="exif-grid">
+            <div class="exif-item"><span class="exif-label">相机</span><span class="exif-value">{camera || '--'}</span></div>
+            <div class="exif-item"><span class="exif-label">镜头</span><span class="exif-value">{lens || '--'}</span></div>
+            <div class="exif-item"><span class="exif-label">焦距</span><span class="exif-value">{settings.focal || '--'}</span></div>
+            <div class="exif-item"><span class="exif-label">光圈</span><span class="exif-value">{settings.aperture || '--'}</span></div>
+            <div class="exif-item"><span class="exif-label">快门</span><span class="exif-value">{settings.shutter || '--'}</span></div>
+            <div class="exif-item"><span class="exif-label">ISO</span><span class="exif-value">{settings.iso || '--'}</span></div>
+          </div>
+        </div>
 
         <section class="photo-gallery">
           {photos.map((img: string) => (
@@ -149,7 +208,9 @@ const {
 
         <article class="notes">
           <span class="notes-title">拍摄笔记</span>
-          <Content />
+          <div class="prose">
+            <Content />
+          </div>
         </article>
 
         <div class="back-nav">

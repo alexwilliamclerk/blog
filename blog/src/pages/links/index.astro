@@ -1,0 +1,48 @@
+﻿---
+const links = [
+  { name: "Astro", desc: "静态站点框架", url: "https://astro.build/" },
+  { name: "Nginx", desc: "Web 服务器", url: "https://nginx.org/" },
+  { name: "Cloudflare", desc: "DNS / CDN / 规则", url: "https://www.cloudflare.com/" },
+];
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>友链</title>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <div class="brand">
+          <span class="dot"></span>
+          <span>Alex · 博客</span>
+          <span> / 友链</span>
+        </div>
+
+        <nav style="display:flex;gap:10px;align-items:center;">
+          <a class="pill" href="/">返回首页</a>
+          <a class="pill" href="/about/">关于我</a>
+          <a class="pill" href="/search/">搜索</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="grid" style="margin-top:14px;">
+          {links.map((x) => (
+            <a class="card" href={x.url} target="_blank" rel="noreferrer">
+              <div class="meta">
+                <div class="title">{x.name}</div>
+                <div class="sub">{x.desc}</div>
+                <div class="sub" style="opacity:.75;margin-top:8px;">{x.url}</div>
+              </div>
+            </a>
+          ))}
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

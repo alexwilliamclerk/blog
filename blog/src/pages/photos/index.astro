@@ -3,11 +3,8 @@ import { getCollection } from "astro:content";
 
 // 获取所有摄影作品并按日期排序
 const allPhotos = await getCollection("photos");
-const sortedPhotos = allPhotos.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
-
 import { getCollection } from "astro:content";
 
-const photosAll = await getCollection("photos");
 const sortedPhotos = photosAll.sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
 ---
 <html lang="zh-CN">

@@ -13,8 +13,8 @@ settings:
   shutter: 1/125
   iso: 800
 photos:
-  - /images/photos/first-shot/01.jpg
-  - /images/photos/first-shot/02.jpg
+  - /images/photos/01.jpg
+  - /images/photos/02.jpg
 ---
 
 这里可以写几句拍摄记录。

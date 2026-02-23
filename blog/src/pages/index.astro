@@ -36,266 +36,285 @@ const latestContent = [
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{profile.name} · 首页</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap" rel="stylesheet">
     <style>
       :root {
-        --bg-top: #afede3;       /* 天蓝色背景 */
-        --text-main: #1d1d1f;    /* 苹果风深色主文字 */
-        --text-sub: #86868b;     /* 苹果风灰色副文字 */
-        --accent: #5abcb0;       /* 加深一点的天蓝色作为点缀，保证白底可读性 */
-        --radius: 24px;          /* 苹果风大圆角 */
+        --bg-top: #afede3;       /* 天蓝色 */
+        --bg-bottom: #ffffff;    /* 白色 */
+        --card-bg: rgba(255, 255, 255, 0.6); /* 苹果风半透明白 */
+        --text-main: #1d1d1f;    /* 苹果主黑 */
+        --text-sub: #86868b;     /* 苹果次灰 */
+        --accent: #afede3;       /* 主题点缀 */
+        --border: rgba(255, 255, 255, 0.4);
+        --radius: 24px;          
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.04); 
       }
 
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
+      /* 整体渐变背景：随页面滑动变白 */
       body {
-        background: #ffffff;
+        background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 1200px);
+        background-repeat: no-repeat;
         color: var(--text-main);
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
       }
 
-      /* --- 滚动动画区域 --- */
-      #intro-wrap {
-        height: 300vh; /* 提供足够的滚动空间 */
+      /* === 滚动动画区域 === */
+      .scroll-track {
+        height: 250vh; /* 提供滚动距离 */
         position: relative;
-        background: var(--bg-top);
+        z-index: 50;
       }
 
-      #sticky-intro {
+      .sticky-view {
         position: sticky;
         top: 0;
         height: 100vh;
         display: flex;
-        align-items: center;
         justify-content: center;
+        align-items: center;
         overflow: hidden;
-        z-index: 10;
       }
 
-      #white-box {
-        width: 280px;
-        height: 140px;
+      /* 白色基础方框 */
+      .animation-box {
+        width: 260px;
+        height: 260px;
         background: #ffffff;
-        border-radius: var(--radius);
+        border-radius: 40px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.08);
         position: relative;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-        overflow: hidden;
-        will-change: box-shadow;
-      }
-
-      #name-text {
-        position: absolute;
-        inset: 0;
         display: flex;
-        align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
-        font-weight: 600;
-        letter-spacing: 2px;
-        color: var(--text-main);
-        will-change: opacity;
+        align-items: center;
+        overflow: hidden;
+        transform: scale(var(--box-scale, 1));
+        opacity: var(--box-opacity, 1);
+        will-change: transform, opacity;
       }
 
-      #svg-overlay {
+      .alex-text {
+        font-size: 44px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        color: var(--text-main);
+        opacity: var(--alex-opacity, 1);
+        transition: opacity 0.1s;
+      }
+
+      /* 浅蓝色遮罩与镂空的 LOVE */
+      .love-cover {
         position: absolute;
-        inset: 0;
-        clip-path: inset(0 100% 0 0); /* 初始状态裁剪到完全不可见 */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        /* 通过 clip-path 实现从上向下滑动遮住的效果 */
+        clip-path: inset(var(--cover-inset, 100%) 0 0 0);
         will-change: clip-path;
       }
 
-      /* --- 博客主体区域 --- */
-      #main-content {
-        /* 从天蓝色平滑渐变到白色 */
-        background: linear-gradient(180deg, var(--bg-top) 0%, #ffffff 800px);
+      /* === 真实首页内容区域 === */
+      .main-wrapper {
         position: relative;
-        z-index: 20;
-        padding-bottom: 100px;
-        min-height: 100vh;
+        z-index: 10;
+        max-width: 700px;
+        margin: -50vh auto 0; /* 让主内容在动画结束前顺滑衔接 */
+        padding: 40px 20px 100px;
       }
 
-      .container { max-width: 680px; margin: 0 auto; padding: 0 20px; }
-
-      /* 玻璃拟态风格卡片 */
-      .glass-card {
-        background: rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        border-radius: var(--radius);
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03);
-      }
-
-      /* 顶部导航 */
-      header { display: flex; justify-content: space-between; align-items: center; padding-top: 40px; margin-bottom: 40px; }
-      .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.1rem;}
-      .avatar-sm { width: 32px; height: 32px; background: var(--text-main); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+      header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+      .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+      .avatar-sm { width: 32px; height: 32px; background: var(--text-main); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;}
       .nav-links { display: flex; gap: 20px; }
-      .nav-item { text-decoration: none; color: var(--text-sub); font-size: 14px; font-weight: 500; transition: color 0.2s; }
+      .nav-item { text-decoration: none; color: var(--text-sub); font-size: 14px; transition: color 0.2s; }
       .nav-item:hover { color: var(--text-main); }
 
-      /* 个人信息卡片 */
-      .profile-card { padding: 35px; margin-bottom: 30px; }
-      .title { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
-      .tagline { color: var(--text-sub); margin-bottom: 30px; font-size: 1.05rem; }
-
-      .stats-row {
-        background: rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-        padding: 16px 20px;
-        display: inline-flex;
-        gap: 24px;
-        align-items: center;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-      }
-      .stat-item { font-size: 14px; color: var(--text-sub); display: flex; align-items: center; gap: 6px; }
-      .stat-item b { color: var(--text-main); font-weight: 600; font-size: 15px; }
-
-      /* 分类标签页 */
-      .tabs-container { margin: 40px 0 20px; }
-      .tabs {
-        background: rgba(255, 255, 255, 0.5);
+      /* 毛玻璃卡片 */
+      .glass-card {
+        background: var(--card-bg);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        padding: 5px;
-        border-radius: 20px;
-        display: inline-flex;
-        gap: 5px;
-        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: var(--radius);
+        padding: 35px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+        margin-bottom: 30px;
+      }
+
+      .title { font-family: 'Noto Serif SC', serif; font-size: 2.2rem; margin-bottom: 8px; font-weight: 700; }
+      .tagline { color: var(--text-sub); margin-bottom: 30px; font-size: 1.05rem;}
+
+      /* 苹果风数据小组件 */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+      }
+      .stat-item { 
+        background: rgba(255,255,255,0.7); 
+        border: 1px solid rgba(255,255,255,0.5);
+        border-radius: 18px; 
+        padding: 16px; 
+        text-align: center; 
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .stat-item b { color: var(--text-main); font-size: 22px; font-weight: 700; }
+      .stat-item span { color: var(--text-sub); font-size: 12px; font-weight: 500;}
+
+      /* 苹果风分段控制器 (Tabs) */
+      .tabs { 
+        display: inline-flex; 
+        background: rgba(220, 220, 225, 0.5); 
+        padding: 4px; 
+        border-radius: 20px; 
+        margin-bottom: 25px; 
+        backdrop-filter: blur(10px);
       }
       .tab {
-        padding: 8px 20px; border-radius: 16px; color: var(--text-sub);
-        text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s ease;
+        padding: 6px 20px; border-radius: 16px; color: var(--text-sub);
+        text-decoration: none; font-size: 13px; font-weight: 600;
+        transition: all 0.2s ease;
       }
-      .tab.active { background: #ffffff; color: var(--text-main); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04); }
-      .tab:not(.active):hover { color: var(--text-main); }
+      .tab.active { background: #fff; color: var(--text-main); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 
       /* 文章列表 */
-      .post-list { display: flex; flex-direction: column; gap: 16px; }
+      .post-list { display: flex; flex-direction: column; gap: 15px; }
       .post-card {
-        padding: 24px;
+        background: var(--card-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 22px 25px;
+        border-radius: 20px;
         text-decoration: none;
         color: inherit;
+        border: 1px solid var(--border);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
       }
-      .post-card:hover { transform: scale(1.01) translateY(-2px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06); }
-      .post-info .type { font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 6px; display: block; letter-spacing: 0.5px;}
+      .post-card:hover { transform: scale(1.015); background: #ffffff; box-shadow: var(--shadow); }
+      .post-info .type { font-size: 12px; color: #10b981; font-weight: 700; margin-bottom: 6px; display: block; letter-spacing: 0.5px;}
       .post-info .post-title { font-size: 1.15rem; font-weight: 600; }
-      .post-meta { text-align: right; color: var(--text-sub); font-size: 13px; font-weight: 500; }
+      .post-meta { text-align: right; color: var(--text-sub); font-size: 13px; font-weight: 500;}
 
-      @media (max-width: 500px) {
-        .stats-row { flex-wrap: wrap; gap: 15px; }
-        .post-card { flex-direction: column; align-items: flex-start; gap: 12px; }
-        .post-meta { text-align: left; display: flex; gap: 10px; align-items: center; }
+      @media (max-width: 600px) {
+        .animation-box { width: 220px; height: 220px; }
+        .alex-text { font-size: 36px; }
+        .stats-grid { grid-template-columns: 1fr; gap: 10px; }
       }
     </style>
   </head>
   <body>
-    <div id="intro-wrap">
-      <div id="sticky-intro">
-        <div id="white-box">
-          <div id="name-text">{profile.name}</div>
+    
+    <div class="scroll-track">
+      <div class="sticky-view">
+        <div class="animation-box">
+          <div class="alex-text">Alex</div>
           
-          <div id="svg-overlay">
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+          <div class="love-cover">
+            <svg width="100%" height="100%" viewBox="0 0 260 260">
               <defs>
-                <mask id="loveMask">
-                  <rect width="100%" height="100%" fill="white"/>
-                  <text x="50%" y="50%" dy="0.1em" dominant-baseline="middle" text-anchor="middle" font-size="46" font-weight="800" font-family="-apple-system, sans-serif" letter-spacing="4" fill="black">LOVE</text>
+                <mask id="love-mask">
+                  <rect width="100%" height="100%" fill="white" />
+                  <text x="50%" y="50%" text-anchor="middle" dy=".35em" font-size="65" font-weight="900" font-family="-apple-system, sans-serif" letter-spacing="2" fill="black">LOVE</text>
                 </mask>
               </defs>
-              <rect width="100%" height="100%" fill="var(--bg-top)" mask="url(#loveMask)"/>
+              <rect width="100%" height="100%" fill="#afede3" mask="url(#love-mask)" />
             </svg>
           </div>
         </div>
       </div>
     </div>
 
-    <main id="main-content">
-      <div class="container">
-        <header>
-          <div class="logo">
-            <div class="avatar-sm">{profile.name.charAt(0)}</div>
-            <span>{profile.name}</span>
-          </div>
-          <nav class="nav-links">
-            <a href="/about" class="nav-item">关于</a>
-            <a href="/links" class="nav-item">友链</a>
-            <a href="/search" class="nav-item">搜索</a>
-          </nav>
-        </header>
+    <div class="main-wrapper" id="main-content">
+      <header>
+        <div class="logo">
+          <div class="avatar-sm">A</div>
+          <span>{profile.name}</span>
+        </div>
+        <nav class="nav-links">
+          <a href="/about" class="nav-item">关于</a>
+          <a href="/links" class="nav-item">友链</a>
+          <a href="/search" class="nav-item">搜索</a>
+        </nav>
+      </header>
 
-        <section class="glass-card profile-card">
-          <h1 class="title">你好。</h1>
+      <main>
+        <section class="glass-card">
+          <h1 class="title">{profile.name}</h1>
           <p class="tagline">{profile.tagline}</p>
           
-          <div class="stats-row">
+          <div class="stats-grid">
             {profile.stats.map(s => (
-              <div class="stat-item">{s.label} <b>{s.count}</b></div>
+              <div class="stat-item">
+                <b>{s.count}</b>
+                <span>{s.label}</span>
+              </div>
             ))}
           </div>
         </section>
 
-        <div class="tabs-container">
-          <nav class="tabs">
-            <a href="/" class="tab active">最近更新</a>
-            <a href="/poems" class="tab">诗歌</a>
-            <a href="/photos" class="tab">摄影</a>
-          </nav>
-        </div>
+        <nav class="tabs">
+          <a href="/" class="tab active">最近更新</a>
+          <a href="/poems" class="tab">诗歌</a>
+          <a href="/photos" class="tab">摄影</a>
+        </nav>
 
         <div class="post-list">
           {latestContent.map(item => (
-            <a href={`/${item.type}/${item.slug}`} class="glass-card post-card">
+            <a href={`/${item.type}/${item.slug}`} class="post-card">
               <div class="post-info">
                 <span class="type">{item.typeLabel}</span>
                 <div class="post-title">{item.data.title}</div>
               </div>
               <div class="post-meta">
                 <div>{new Date(item.data.date).toLocaleDateString('zh-CN')}</div>
-                <div style="color:var(--text-sub); display:none; /* mobile inline style toggle */">→</div>
               </div>
             </a>
           ))}
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
 
     <script>
       document.addEventListener('DOMContentLoaded', () => {
-        const introWrap = document.getElementById('intro-wrap');
-        const nameText = document.getElementById('name-text');
-        const svgOverlay = document.getElementById('svg-overlay');
-        const whiteBox = document.getElementById('white-box');
+        const track = document.querySelector('.scroll-track');
+        const mainContent = document.getElementById('main-content');
+        
+        // 初始隐藏主内容区，避免透过动画区看到
+        mainContent.style.opacity = '0';
 
         window.addEventListener('scroll', () => {
-          // 计算在 intro-wrap 内部的滚动进度 (0 到 1)
-          const maxScroll = introWrap.offsetHeight - window.innerHeight;
-          let p = window.scrollY / maxScroll;
-          if (p < 0) p = 0;
-          if (p > 1) p = 1;
+          if (!track) return;
+          const rect = track.getBoundingClientRect();
+          // 计算滚动进度 0 ~ 1
+          const p = Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)));
+          
+          // 阶段1: 浅蓝遮罩向下滑动覆盖 (0.1 -> 0.45)
+          let p1 = Math.max(0, Math.min(1, (p - 0.1) / 0.35));
+          // 阶段2: 整个盒子缩小并淡出 (0.7 -> 0.95)
+          let p2 = Math.max(0, Math.min(1, (p - 0.7) / 0.25));
 
-          // 阶段一 (0% - 30%): 昵称逐渐淡出
-          let nameOp = 1 - (p / 0.3);
-          nameText.style.opacity = Math.max(0, nameOp).toString();
+          // 应用 CSS 变量驱动动画
+          track.style.setProperty('--cover-inset', `${(1 - p1) * 100}%`);
+          track.style.setProperty('--alex-opacity', `${1 - (p1 * 1.5)}`); // 文本提前淡出
+          track.style.setProperty('--box-scale', `${1 - (p2 * 0.15)}`);
+          track.style.setProperty('--box-opacity', `${1 - p2}`);
 
-          // 阶段二 (30% - 70%): 遮罩层从右向左滑入 (通过减少 clip-path 的 right inset)
-          let sweep = 100;
-          if (p > 0.3) {
-            sweep = 100 - ((p - 0.3) / 0.4) * 100;
+          // 主页内容在动画快结束时淡入
+          if (p > 0.8) {
+            mainContent.style.opacity = `${(p - 0.8) / 0.2}`;
+          } else {
+            mainContent.style.opacity = '0';
           }
-          svgOverlay.style.clipPath = `inset(0 ${Math.max(0, Math.min(100, sweep))}% 0 0)`;
-
-          // 阶段三 (60% - 90%): 彻底融合，让白框原有的阴影淡出，做到视觉上彻底隐入背景
-          let shadowOp = 0.08;
-          if (p > 0.6) {
-             shadowOp = 0.08 * (1 - ((p - 0.6) / 0.3));
-          }
-          whiteBox.style.boxShadow = `0 12px 40px rgba(0, 0, 0, ${Math.max(0, shadowOp)})`;
-        }, { passive: true });
+        });
       });
     </script>
   </body>

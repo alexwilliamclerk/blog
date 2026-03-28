@@ -1,321 +1,692 @@
----
-import { getCollection } from "astro:content";
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  motion, 
+  AnimatePresence, 
+  useScroll, 
+  useTransform, 
+  useSpring, 
+  useInView,
+  LayoutGroup
+} from 'framer-motion';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell
+} from 'recharts';
+import { 
+  Camera, PenTool, Layers, Search, Bell, Settings, Command, 
+  ChevronRight, ArrowUpRight, Activity, Clock, FileText, 
+  Zap, ShieldCheck, Cpu, Globe, ArrowRight, CheckCircle2
+} from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
-// 1. 获取内容数据
-const poemsAll = await getCollection("poems");
-const photosAll = await getCollection("photos");
+// ==========================================
+// 1. 系统级配置与工具 (Core Utils & Config)
+// ==========================================
 
-// 过滤掉草稿
-const poems = poemsAll.filter((p) => !p.data?.draft);
-const photos = photosAll.filter((p) => !p.data?.draft);
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
-// 统计逻辑
-const seriesSet = new Set();
-poems.forEach(p => p.data?.series && seriesSet.add(p.data.series));
-photos.forEach(p => p.data?.series && seriesSet.add(p.data.series));
+// 高级配色体系 (深色模式优先，融入原有的天蓝色 #afede3)
+const THEME = {
+  colors: {
+    accent: '#afede3',         // 原有的天蓝色作为核心高光点缀
+    accentGlow: 'rgba(175, 237, 227, 0.4)',
+    background: '#0a0a0c',     // 极深色背景，提供沉浸感
+    surface: 'rgba(255, 255, 255, 0.03)',
+    surfaceHover: 'rgba(255, 255, 255, 0.06)',
+    border: 'rgba(255, 255, 255, 0.08)',
+    text: {
+      main: '#f8fafc',
+      sub: '#94a3b8',
+      muted: '#64748b'
+    }
+  },
+  animation: {
+    spring: { type: "spring", stiffness: 200, damping: 20 },
+    easeOutExpo: [0.16, 1, 0.3, 1]
+  }
+};
 
-const profile = {
+// ==========================================
+// 2. 模拟数据层 (Data Layer - Preserving Original Structure)
+// ==========================================
+
+// 完全保留原有数据结构，增加状态维度以适应 SaaS 面板展示
+const MOCK_PROFILE = {
   name: "Alex",
   tagline: "写诗 / 摄影 / 记录",
   stats: [
-    { label: "诗歌", count: poems.length },
-    { label: "摄影", count: photos.length },
-    { label: "系列", count: seriesSet.size }
+    { label: "诗歌", count: 42, trend: "+12%", status: "active" },
+    { label: "摄影", count: 128, trend: "+5%", status: "stable" },
+    { label: "系列", count: 8, trend: "+2", status: "new" }
   ]
 };
 
-// 合并最新的内容用于首页展示
-const latestContent = [
-  ...poems.map(p => ({ ...p, type: 'poems', typeLabel: '诗歌' })),
-  ...photos.map(p => ({ ...p, type: 'photos', typeLabel: '摄影' }))
-].sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()).slice(0, 6);
----
+const MOCK_LATEST_CONTENT = [
+  { slug: "winter-beijing", type: "photos", typeLabel: "摄影", data: { title: "冬日的北京 - 故宫初雪", date: "2026-03-28T10:00:00Z", views: 1240, readTime: "5 min" } },
+  { slug: "tears-of-nature", type: "poems", typeLabel: "诗歌", data: { title: "自然之泪 - 存在主义的独白", date: "2026-03-25T14:30:00Z", views: 890, readTime: "3 min" } },
+  { slug: "first-photo-set", type: "photos", typeLabel: "摄影", data: { title: "第一组胶片 - 记录失落的色彩", date: "2026-03-20T09:15:00Z", views: 2100, readTime: "8 min" } },
+  { slug: "midnight-thoughts", type: "poems", typeLabel: "诗歌", data: { title: "午夜随想录 - 城市的倒影", date: "2026-03-15T22:00:00Z", views: 650, readTime: "2 min" } },
+  { slug: "street-photography", type: "photos", typeLabel: "摄影", data: { title: "街头纪实 - 烟火气的瞬间", date: "2026-03-10T16:45:00Z", views: 1560, readTime: "6 min" } },
+  { slug: "spring-awakening", type: "poems", typeLabel: "诗歌", data: { title: "春日复苏 - 破冰的声音", date: "2026-03-05T08:20:00Z", views: 1120, readTime: "4 min" } },
+];
 
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{profile.name} · 首页</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap" rel="stylesheet">
-    <style>
-      :root {
-        --bg-top: #afede3;       /* 天蓝色 */
-        --bg-bottom: #ffffff;    /* 白色 */
-        --card-bg: rgba(255, 255, 255, 0.6); /* 苹果风半透明白 */
-        --text-main: #1d1d1f;    /* 苹果主黑 */
-        --text-sub: #86868b;     /* 苹果次灰 */
-        --accent: #afede3;       /* 主题点缀 */
-        --border: rgba(255, 255, 255, 0.4);
-        --radius: 24px;          
-        --shadow: 0 8px 32px rgba(0, 0, 0, 0.04); 
-      }
+// 增加图表依赖的辅助数据
+const MOCK_CHART_DATA = [
+  { name: 'Mon', views: 4000, engagement: 2400 },
+  { name: 'Tue', views: 3000, engagement: 1398 },
+  { name: 'Wed', views: 2000, engagement: 9800 },
+  { name: 'Thu', views: 2780, engagement: 3908 },
+  { name: 'Fri', views: 1890, engagement: 4800 },
+  { name: 'Sat', views: 2390, engagement: 3800 },
+  { name: 'Sun', views: 3490, engagement: 4300 },
+];
 
-      * { box-sizing: border-box; margin: 0; padding: 0; }
+const MOCK_SYSTEM_LOGS = [
+  { id: 1, type: 'success', message: '内容分发网络 (CDN) 缓存已刷新', time: '10 mins ago' },
+  { id: 2, type: 'info', message: '检测到来自 US-East 的高频访问', time: '1 hour ago' },
+  { id: 3, type: 'system', message: '数据库自动备份完成', time: '3 hours ago' },
+];
 
-      /* 整体渐变背景：随页面滑动变白 */
-      body {
-        background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 1200px);
-        background-repeat: no-repeat;
-        color: var(--text-main);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
-      }
+// ==========================================
+// 3. 高级交互 Hooks (Advanced Hooks)
+// ==========================================
 
-      /* === 滚动动画区域 === */
-      .scroll-track {
-        height: 250vh; /* 提供滚动距离 */
-        position: relative;
-        z-index: 50;
-      }
+// 鼠标光晕追踪 Hook
+function useMousePosition() {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  useEffect(() => {
+    const updateMousePosition = (ev: MouseEvent) => {
+      setMousePosition({ x: ev.clientX, y: ev.clientY });
+    };
+    window.addEventListener('mousemove', updateMousePosition);
+    return () => window.removeEventListener('mousemove', updateMousePosition);
+  }, []);
+  return mousePosition;
+}
 
-      .sticky-view {
-        position: sticky;
-        top: 0;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-      }
+// 缓动数字增长 Hook
+function useCountUp(end: number, duration: number = 2) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let startTime: number | null = null;
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / (duration * 1000), 1);
+      const easeProgress = 1 - Math.pow(1 - progress, 4); // Quartic ease out
+      setCount(Math.floor(easeProgress * end));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, [end, duration]);
+  return count;
+}
 
-      /* 白色基础方框 */
-      .animation-box {
-        width: 260px;
-        height: 260px;
-        background: #ffffff;
-        border-radius: 40px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.08);
-        position: relative;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-        transform: scale(var(--box-scale, 1));
-        opacity: var(--box-opacity, 1);
-        will-change: transform, opacity;
-      }
+// ==========================================
+// 4. 原子级/通用 UI 组件 (UI Primitives)
+// ==========================================
 
-      .alex-text {
-        font-size: 44px;
-        font-weight: 800;
-        letter-spacing: 1px;
-        color: var(--text-main);
-        opacity: var(--alex-opacity, 1);
-        transition: opacity 0.1s;
-      }
+// 顶级玻璃拟态卡片，带鼠标感应流光边界
+const PremiumGlowCard: React.FC<{ children: React.ReactNode; className?: string; delay?: number }> = ({ children, className, delay = 0 }) => {
+  const mousePosition = useMousePosition();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ left: 0, top: 0 });
 
-      /* 浅蓝色遮罩与镂空的 LOVE */
-      .love-cover {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        /* 通过 clip-path 实现从上向下滑动遮住的效果 */
-        clip-path: inset(var(--cover-inset, 100%) 0 0 0);
-        will-change: clip-path;
-      }
+  useEffect(() => {
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      setBox({ left: rect.left, top: rect.top });
+    }
+  }, [mousePosition]);
 
-      /* === 真实首页内容区域 === */
-      .main-wrapper {
-        position: relative;
-        z-index: 10;
-        max-width: 700px;
-        margin: -50vh auto 0; /* 让主内容在动画结束前顺滑衔接 */
-        padding: 40px 20px 100px;
-      }
+  const x = mousePosition.x - box.left;
+  const y = mousePosition.y - box.top;
 
-      header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
-      .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
-      .avatar-sm { width: 32px; height: 32px; background: var(--text-main); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold;}
-      .nav-links { display: flex; gap: 20px; }
-      .nav-item { text-decoration: none; color: var(--text-sub); font-size: 14px; transition: color 0.2s; }
-      .nav-item:hover { color: var(--text-main); }
+  return (
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay, ease: THEME.animation.easeOutExpo }}
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-3xl",
+        "transition-all duration-500 hover:bg-white/[0.04] hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:border-white/10",
+        className
+      )}
+    >
+      {/* 鼠标悬浮探照灯效果 */}
+      <div 
+        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background: `radial-gradient(500px circle at ${x}px ${y}px, rgba(175, 237, 227, 0.08), transparent 40%)`
+        }}
+      />
+      <div className="relative z-10 h-full">{children}</div>
+    </motion.div>
+  );
+};
 
-      /* 毛玻璃卡片 */
-      .glass-card {
-        background: var(--card-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border-radius: var(--radius);
-        padding: 35px;
-        box-shadow: var(--shadow);
-        border: 1px solid var(--border);
-        margin-bottom: 30px;
-      }
+// 状态脉冲点
+const StatusDot = ({ color = THEME.colors.accent }) => (
+  <span className="relative flex h-2.5 w-2.5">
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: color }}></span>
+    <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ backgroundColor: color }}></span>
+  </span>
+);
 
-      .title { font-family: 'Noto Serif SC', serif; font-size: 2.2rem; margin-bottom: 8px; font-weight: 700; }
-      .tagline { color: var(--text-sub); margin-bottom: 30px; font-size: 1.05rem;}
+// ==========================================
+// 5. 核心业务与展示组件 (Feature Modules)
+// ==========================================
 
-      /* 苹果风数据小组件 */
-      .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 15px;
-      }
-      .stat-item { 
-        background: rgba(255,255,255,0.7); 
-        border: 1px solid rgba(255,255,255,0.5);
-        border-radius: 18px; 
-        padding: 16px; 
-        text-align: center; 
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      .stat-item b { color: var(--text-main); font-size: 22px; font-weight: 700; }
-      .stat-item span { color: var(--text-sub); font-size: 12px; font-weight: 500;}
+// 5.1 侧边栏 (SaaS 化导航扩展)
+const AppSidebar = () => {
+  return (
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 flex-col border-r border-white/5 bg-[#050505]/80 backdrop-blur-2xl lg:flex">
+      <div className="flex h-20 items-center gap-3 px-6 border-b border-white/5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#afede3] to-teal-600 shadow-[0_0_15px_rgba(175,237,227,0.3)]">
+          <Command size={16} className="text-black" />
+        </div>
+        <span className="text-lg font-bold tracking-widest text-white">
+          ALEX<span className="text-[#afede3] font-light">.OS</span>
+        </span>
+      </div>
 
-      /* 苹果风分段控制器 (Tabs) */
-      .tabs { 
-        display: inline-flex; 
-        background: rgba(220, 220, 225, 0.5); 
-        padding: 4px; 
-        border-radius: 20px; 
-        margin-bottom: 25px; 
-        backdrop-filter: blur(10px);
-      }
-      .tab {
-        padding: 6px 20px; border-radius: 16px; color: var(--text-sub);
-        text-decoration: none; font-size: 13px; font-weight: 600;
-        transition: all 0.2s ease;
-      }
-      .tab.active { background: #fff; color: var(--text-main); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+      <div className="flex-1 overflow-y-auto py-6 px-4 custom-scrollbar">
+        <div className="space-y-6">
+          <div>
+            <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">内容中枢</div>
+            <nav className="space-y-1">
+              <a href="#" className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium text-white transition-colors">
+                <Activity size={16} className="text-[#afede3]" /> 概览仪表盘
+              </a>
+              <a href="/poems" className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white transition-all">
+                <PenTool size={16} className="group-hover:text-[#afede3] transition-colors" /> 诗歌引擎
+              </a>
+              <a href="/photos" className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white transition-all">
+                <Camera size={16} className="group-hover:text-[#afede3] transition-colors" /> 摄影图库
+              </a>
+            </nav>
+          </div>
 
-      /* 文章列表 */
-      .post-list { display: flex; flex-direction: column; gap: 15px; }
-      .post-card {
-        background: var(--card-bg);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        padding: 22px 25px;
-        border-radius: 20px;
-        text-decoration: none;
-        color: inherit;
-        border: 1px solid var(--border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-      }
-      .post-card:hover { transform: scale(1.015); background: #ffffff; box-shadow: var(--shadow); }
-      .post-info .type { font-size: 12px; color: #10b981; font-weight: 700; margin-bottom: 6px; display: block; letter-spacing: 0.5px;}
-      .post-info .post-title { font-size: 1.15rem; font-weight: 600; }
-      .post-meta { text-align: right; color: var(--text-sub); font-size: 13px; font-weight: 500;}
-
-      @media (max-width: 600px) {
-        .animation-box { width: 220px; height: 220px; }
-        .alex-text { font-size: 36px; }
-        .stats-grid { grid-template-columns: 1fr; gap: 10px; }
-      }
-    </style>
-  </head>
-  <body>
-    
-    <div class="scroll-track">
-      <div class="sticky-view">
-        <div class="animation-box">
-          <div class="alex-text">Alex</div>
-          
-          <div class="love-cover">
-            <svg width="100%" height="100%" viewBox="0 0 260 260">
-              <defs>
-                <mask id="love-mask">
-                  <rect width="100%" height="100%" fill="white" />
-                  <text x="50%" y="50%" text-anchor="middle" dy=".35em" font-size="65" font-weight="900" font-family="-apple-system, sans-serif" letter-spacing="2" fill="black">LOVE</text>
-                </mask>
-              </defs>
-              <rect width="100%" height="100%" fill="#afede3" mask="url(#love-mask)" />
-            </svg>
+          <div>
+            <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">系统拓扑</div>
+            <nav className="space-y-1">
+              <a href="/about" className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white transition-all">
+                <ShieldCheck size={16} /> 创作者指纹 (关于)
+              </a>
+              <a href="/links" className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white transition-all">
+                <Globe size={16} /> 神经节点 (友链)
+              </a>
+            </nav>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="main-wrapper" id="main-content">
-      <header>
-        <div class="logo">
-          <div class="avatar-sm">A</div>
-          <span>{profile.name}</span>
-        </div>
-        <nav class="nav-links">
-          <a href="/about" class="nav-item">关于</a>
-          <a href="/links" class="nav-item">友链</a>
-          <a href="/search" class="nav-item">搜索</a>
-        </nav>
-      </header>
-
-      <main>
-        <section class="glass-card">
-          <h1 class="title">{profile.name}</h1>
-          <p class="tagline">{profile.tagline}</p>
-          
-          <div class="stats-grid">
-            {profile.stats.map(s => (
-              <div class="stat-item">
-                <b>{s.count}</b>
-                <span>{s.label}</span>
-              </div>
-            ))}
+      <div className="border-t border-white/5 p-4">
+        <div className="rounded-xl border border-[#afede3]/20 bg-[#afede3]/5 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <StatusDot />
+            <span className="text-xs font-semibold text-[#afede3]">System Online</span>
           </div>
-        </section>
+          <p className="text-[11px] text-slate-400 leading-relaxed">
+            NEXUS CORE v3.2 运行中。<br/>所有数据节点同步完成。
+          </p>
+        </div>
+      </div>
+    </aside>
+  );
+};
 
-        <nav class="tabs">
-          <a href="/" class="tab active">最近更新</a>
-          <a href="/poems" class="tab">诗歌</a>
-          <a href="/photos" class="tab">摄影</a>
-        </nav>
+// 5.2 顶部命令栏 (SaaS 化头部)
+const TopHeader = () => {
+  return (
+    <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-white/5 bg-[#0a0a0c]/60 px-6 backdrop-blur-xl lg:px-10 transition-all">
+      <div className="flex flex-1 items-center gap-4">
+        <div className="group relative w-full max-w-md hidden md:block">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-[#afede3] transition-colors" />
+          <input 
+            type="text" 
+            placeholder="搜索诗歌、图集或系统日志... (Press ⌘K)" 
+            className="h-10 w-full rounded-xl border border-white/10 bg-black/20 pl-10 pr-4 text-sm text-slate-200 placeholder-slate-500 focus:border-[#afede3]/50 focus:bg-black/40 focus:outline-none focus:ring-1 focus:ring-[#afede3]/50 transition-all"
+          />
+        </div>
+      </div>
 
-        <div class="post-list">
-          {latestContent.map(item => (
-            <a href={`/${item.type}/${item.slug}`} class="post-card">
-              <div class="post-info">
-                <span class="type">{item.typeLabel}</span>
-                <div class="post-title">{item.data.title}</div>
+      <div className="flex items-center gap-5">
+        <button className="relative text-slate-400 hover:text-white transition-colors">
+          <Bell size={20} />
+          <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-[#afede3] border-2 border-[#0a0a0c]"></span>
+        </button>
+        <button className="text-slate-400 hover:text-white transition-colors">
+          <Settings size={20} />
+        </button>
+        <div className="h-6 w-px bg-white/10" />
+        <div className="flex items-center gap-3 cursor-pointer group">
+          <div className="flex flex-col items-end hidden sm:flex">
+            <span className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">{MOCK_PROFILE.name}</span>
+            <span className="text-[11px] text-[#afede3]">Master Admin</span>
+          </div>
+          <div className="h-10 w-10 rounded-full border border-white/10 bg-gradient-to-tr from-slate-800 to-slate-700 p-[2px] overflow-hidden group-hover:border-[#afede3]/50 transition-colors">
+            <div className="h-full w-full rounded-full bg-slate-900 flex items-center justify-center text-sm font-bold text-white">
+              A
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+// 5.3 核心 KPI 统计区域 (原有的统计逻辑豪华版)
+const StatsGrid = () => {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6 mb-8">
+      {MOCK_PROFILE.stats.map((stat, idx) => {
+        const count = useCountUp(stat.count);
+        return (
+          <PremiumGlowCard key={stat.label} delay={0.1 * idx}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-slate-400">{stat.label} 总量</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 border border-white/5">
+                  {idx === 0 ? <PenTool size={16} className="text-[#afede3]" /> : 
+                   idx === 1 ? <Camera size={16} className="text-[#afede3]" /> : 
+                   <Layers size={16} className="text-[#afede3]" />}
+                </div>
               </div>
-              <div class="post-meta">
-                <div>{new Date(item.data.date).toLocaleDateString('zh-CN')}</div>
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl font-bold tracking-tight text-white drop-shadow-md">
+                  {count}
+                </span>
+                <span className="flex items-center text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full border border-emerald-400/20">
+                  <ArrowUpRight size={12} className="mr-1" /> {stat.trend}
+                </span>
               </div>
-            </a>
+            </div>
+          </PremiumGlowCard>
+        );
+      })}
+    </div>
+  );
+};
+
+// 5.4 内容流分析图表 (新增的高级组件)
+const DataAnalyticsChart = () => {
+  return (
+    <PremiumGlowCard delay={0.4} className="col-span-1 lg:col-span-8 h-[380px]">
+      <div className="p-6 flex flex-col h-full">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-white">内容流量聚合引擎</h3>
+            <p className="text-sm text-slate-400 mt-1">过去 7 天内的阅读量与交互频率分析</p>
+          </div>
+          <div className="flex gap-2">
+            <button className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/10 text-white border border-white/5">7D</button>
+            <button className="px-3 py-1.5 text-xs font-medium rounded-lg hover:bg-white/5 text-slate-400 transition-colors">30D</button>
+          </div>
+        </div>
+        
+        <div className="flex-1 w-full relative -ml-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={MOCK_CHART_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#afede3" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="#afede3" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+              <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val/1000}k`} dx={-10} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'rgba(10, 10, 12, 0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
+                itemStyle={{ color: '#fff', fontSize: '14px', fontWeight: 600 }}
+                labelStyle={{ color: '#afede3', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase' }}
+              />
+              <Area type="monotone" dataKey="views" stroke="#afede3" strokeWidth={3} fillOpacity={1} fill="url(#colorViews)" activeDot={{ r: 6, fill: '#afede3', stroke: '#0a0a0c', strokeWidth: 2 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </PremiumGlowCard>
+  );
+};
+
+// 5.5 系统动态日志 (新增的高级组件)
+const SystemLogs = () => {
+  return (
+    <PremiumGlowCard delay={0.5} className="col-span-1 lg:col-span-4 h-[380px]">
+      <div className="p-6 h-full flex flex-col">
+        <h3 className="text-lg font-semibold text-white mb-1">系统事件流</h3>
+        <p className="text-sm text-slate-400 mb-6">实时追踪底层架构状态</p>
+        
+        <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+          {MOCK_SYSTEM_LOGS.map((log, idx) => (
+            <div key={log.id} className="relative flex gap-4">
+              {idx !== MOCK_SYSTEM_LOGS.length - 1 && (
+                <div className="absolute left-[15px] top-[30px] bottom-[-24px] w-px bg-white/10" />
+              )}
+              <div className={cn(
+                "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/5 bg-[#0a0a0c] shadow-md",
+                log.type === 'success' ? "text-emerald-400" : log.type === 'info' ? "text-[#afede3]" : "text-slate-400"
+              )}>
+                {log.type === 'success' ? <CheckCircle2 size={14} /> : log.type === 'info' ? <Zap size={14} /> : <Cpu size={14} />}
+              </div>
+              <div className="pt-1.5 pb-2">
+                <p className="text-sm font-medium text-slate-200 leading-snug">{log.message}</p>
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <Clock size={12} className="text-slate-500" />
+                  <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">{log.time}</span>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
-      </main>
-    </div>
+      </div>
+    </PremiumGlowCard>
+  );
+};
 
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        const track = document.querySelector('.scroll-track');
-        const mainContent = document.getElementById('main-content');
-        
-        // 初始隐藏主内容区，避免透过动画区看到
-        mainContent.style.opacity = '0';
+// 5.6 核心内容列表区 (原有逻辑的高度视觉化)
+const OriginalContentZone = () => {
+  const [activeTab, setActiveTab] = useState('latest');
+  const tabs = [
+    { id: 'latest', label: '最近更新' },
+    { id: 'poems', label: '诗歌引擎' },
+    { id: 'photos', label: '图库矩阵' }
+  ];
 
-        window.addEventListener('scroll', () => {
-          if (!track) return;
-          const rect = track.getBoundingClientRect();
-          // 计算滚动进度 0 ~ 1
-          const p = Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)));
+  // 模拟基于 Tab 的过滤
+  const filteredContent = MOCK_LATEST_CONTENT.filter(item => {
+    if (activeTab === 'latest') return true;
+    return item.type === activeTab;
+  });
+
+  return (
+    <PremiumGlowCard delay={0.6} className="col-span-1 lg:col-span-12 mt-6">
+      <div className="p-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 border-b border-white/10 pb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+              内容数据网格
+              <span className="px-2.5 py-1 rounded-md bg-[#afede3]/10 text-[#afede3] text-[10px] font-bold uppercase tracking-widest border border-[#afede3]/20">Live</span>
+            </h2>
+            <p className="text-sm text-slate-400 mt-2">在这里管理和阅览所有的创作记录，支持多维度过滤与检索。</p>
+          </div>
           
-          // 阶段1: 浅蓝遮罩向下滑动覆盖 (0.1 -> 0.45)
-          let p1 = Math.max(0, Math.min(1, (p - 0.1) / 0.35));
-          // 阶段2: 整个盒子缩小并淡出 (0.7 -> 0.95)
-          let p2 = Math.max(0, Math.min(1, (p - 0.7) / 0.25));
+          {/* iOS / Mac 风格的分段控制器 */}
+          <div className="flex p-1 bg-black/40 rounded-xl border border-white/5 backdrop-blur-md">
+            <LayoutGroup>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "relative px-5 py-2 text-sm font-medium transition-colors z-10",
+                    activeTab === tab.id ? "text-black" : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  {activeTab === tab.id && (
+                    <motion.div
+                      layoutId="active-tab-indicator"
+                      className="absolute inset-0 bg-[#afede3] rounded-lg shadow-[0_2px_10px_rgba(175,237,227,0.3)]"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                      style={{ zIndex: -1 }}
+                    />
+                  )}
+                  {tab.label}
+                </button>
+              ))}
+            </LayoutGroup>
+          </div>
+        </div>
 
-          // 应用 CSS 变量驱动动画
-          track.style.setProperty('--cover-inset', `${(1 - p1) * 100}%`);
-          track.style.setProperty('--alex-opacity', `${1 - (p1 * 1.5)}`); // 文本提前淡出
-          track.style.setProperty('--box-scale', `${1 - (p2 * 0.15)}`);
-          track.style.setProperty('--box-opacity', `${1 - p2}`);
+        {/* 文章卡片列表 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AnimatePresence mode="popLayout">
+            {filteredContent.map((item, idx) => (
+              <motion.a
+                layout
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                key={item.slug}
+                href={`/${item.type}/${item.slug}`}
+                className="group relative flex flex-col justify-between rounded-xl border border-white/5 bg-white/[0.01] p-5 transition-all hover:bg-white/[0.04] hover:border-[#afede3]/30 overflow-hidden"
+              >
+                {/* 悬浮背景光效 */}
+                <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-[#afede3]/0 blur-3xl transition-all duration-500 group-hover:bg-[#afede3]/10" />
+                
+                <div className="flex items-start justify-between mb-8 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider border",
+                      item.type === 'poems' ? "bg-indigo-500/10 text-indigo-300 border-indigo-500/20" : "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                    )}>
+                      {item.type === 'poems' ? <PenTool size={10} /> : <Camera size={10} />}
+                      {item.typeLabel}
+                    </span>
+                    <span className="text-xs text-slate-500 flex items-center gap-1">
+                      <Clock size={12} /> {item.data.readTime}
+                    </span>
+                  </div>
+                  <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center border border-white/5 group-hover:bg-[#afede3] group-hover:text-black transition-all duration-300 shadow-sm group-hover:shadow-[0_0_15px_rgba(175,237,227,0.5)] transform group-hover:-rotate-45">
+                    <ArrowRight size={14} />
+                  </div>
+                </div>
 
-          // 主页内容在动画快结束时淡入
-          if (p > 0.8) {
-            mainContent.style.opacity = `${(p - 0.8) / 0.2}`;
-          } else {
-            mainContent.style.opacity = '0';
-          }
-        });
-      });
-    </script>
-  </body>
-</html>
+                <div className="relative z-10">
+                  <h3 className="text-lg font-semibold text-slate-100 mb-2 group-hover:text-[#afede3] transition-colors line-clamp-1">
+                    {item.data.title}
+                  </h3>
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                    <span>Published: {new Date(item.data.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                    <span className="flex items-center gap-1 border border-white/10 rounded-md px-2 py-0.5 bg-black/20">
+                      <Activity size={10} className="text-[#afede3]" /> {item.data.views.toLocaleString()} ops
+                    </span>
+                  </div>
+                </div>
+              </motion.a>
+            ))}
+          </AnimatePresence>
+          {filteredContent.length === 0 && (
+            <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-500">
+              <Search size={32} className="mb-4 opacity-50" />
+              <p>暂无相关内容数据</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </PremiumGlowCard>
+  );
+};
+
+
+// ==========================================
+// 6. 核心 LOVE 滚动动画场景 (The Spectacular Scroll Animation)
+// ==========================================
+const LoveScrollSequence = ({ profile }: { profile: typeof MOCK_PROFILE }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: containerRef });
+
+  // 极度精细的滚动映射逻辑
+  
+  // 阶段 1: (0 -> 0.4) 浅蓝色遮罩由上往下扫过，显示 LOVE 镂空
+  const clipPathInset = useTransform(scrollYProgress, [0, 0.4], [100, 0]);
+  const clipPathString = useTransform(clipPathInset, val => `inset(${val}% 0 0 0)`);
+  
+  // 阶段 2: (0.1 -> 0.3) Alex 文字提前淡出
+  const textOpacity = useTransform(scrollYProgress, [0.1, 0.3], [1, 0]);
+  const textScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95]);
+
+  // 阶段 3: (0.6 -> 0.8) 包含 LOVE 的方块整体缩小并淡出，融入深色背景
+  const boxScale = useTransform(scrollYProgress, [0.6, 0.8], [1, 0.85]);
+  const boxOpacity = useTransform(scrollYProgress, [0.6, 0.8], [1, 0]);
+  
+  // 阶段 4: (0.75 -> 1.0) 真实主页内容从下方浮现并淡入
+  const mainContentOpacity = useTransform(scrollYProgress, [0.75, 0.95], [0, 1]);
+  const mainContentY = useTransform(scrollYProgress, [0.75, 1], [100, 0]);
+  const mainContentScale = useTransform(scrollYProgress, [0.75, 1], [0.95, 1]);
+
+  // 辅助提示向下滚动的箭头淡出
+  const hintOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
+
+  return (
+    <>
+      {/* 滚动轨道容器，高度 300vh 留出充足的滑动空间 */}
+      <div ref={containerRef} className="relative h-[300vh] w-full z-50">
+        <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden bg-[#0a0a0c]">
+          
+          {/* 背景环境光：跟随滚动变暗 */}
+          <motion.div 
+            className="absolute inset-0 z-0 bg-gradient-to-b from-[#afede3]/10 to-transparent"
+            style={{ opacity: boxOpacity }}
+          />
+
+          {/* 核心动画盒子 */}
+          <motion.div 
+            className="relative z-10 flex h-[280px] w-[280px] md:h-[340px] md:w-[340px] items-center justify-center overflow-hidden rounded-[48px] bg-white shadow-[0_30px_100px_rgba(0,0,0,0.5)] border border-white/20"
+            style={{ scale: boxScale, opacity: boxOpacity }}
+          >
+            {/* 昵称层 */}
+            <motion.div 
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ opacity: textOpacity, scale: textScale }}
+            >
+              <h1 className="font-serif text-5xl md:text-6xl font-bold tracking-tight text-black drop-shadow-sm">
+                {profile.name}
+              </h1>
+            </motion.div>
+
+            {/* LOVE 遮罩层 (完美还原原有逻辑，更丝滑) */}
+            <motion.div 
+              className="absolute inset-0 z-20"
+              style={{ clipPath: clipPathString }}
+            >
+              <svg width="100%" height="100%" viewBox="0 0 340 340">
+                <defs>
+                  <mask id="love-mask-pro">
+                    <rect width="100%" height="100%" fill="white" />
+                    <text x="50%" y="50%" textAnchor="middle" dy=".35em" fontSize="85" fontWeight="900" fontFamily="-apple-system, sans-serif" letterSpacing="4" fill="black">
+                      LOVE
+                    </text>
+                  </mask>
+                </defs>
+                {/* 使用要求的天蓝色进行覆盖 */}
+                <rect width="100%" height="100%" fill="#afede3" mask="url(#love-mask-pro)" />
+                {/* 内部高光质感 */}
+                <rect width="100%" height="100%" fill="url(#gloss-gradient)" mask="url(#love-mask-pro)" mixBlendMode="overlay" opacity="0.5"/>
+                <linearGradient id="gloss-gradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="white" stopOpacity="0.8"/>
+                  <stop offset="100%" stopColor="white" stopOpacity="0"/>
+                </linearGradient>
+              </svg>
+            </motion.div>
+          </motion.div>
+
+          {/* 滚动提示 */}
+          <motion.div 
+            className="absolute bottom-12 flex flex-col items-center gap-2"
+            style={{ opacity: hintOpacity }}
+          >
+            <span className="text-xs font-medium uppercase tracking-widest text-slate-500">Scroll to initialize</span>
+            <motion.div 
+              animate={{ y: [0, 8, 0] }} 
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="h-8 w-[1px] bg-gradient-to-b from-slate-500 to-transparent"
+            />
+          </motion.div>
+        </div>
+      </div>
+
+      {/* 真实页面内容容器：挂载在滚动轨道之后，通过负 margin 往上提，使其与动画无缝衔接 */}
+      <motion.div 
+        className="relative z-40 -mt-[100vh] min-h-screen w-full bg-[#0a0a0c]"
+        style={{ opacity: mainContentOpacity, y: mainContentY, scale: mainContentScale }}
+      >
+        <div className="flex w-full">
+          <AppSidebar />
+          
+          <main className="flex-1 lg:ml-64 relative min-h-screen">
+            {/* 炫光背景层 */}
+            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#afede3]/5 blur-[120px] mix-blend-screen" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-900/10 blur-[150px] mix-blend-screen" />
+              {/* 微米级网格背景 */}
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0wIDEwaDQwaDFNMCAyMGg0MGgxTTAgMzBoNDBoMU0xMCAwdjQwaDFNMjAgMHY0MGgxTTMwIDB2NDBoMSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIiBmaWxsPSJub25lIi8+Cjwvc3ZnPg==')] opacity-50" />
+            </div>
+
+            <div className="relative z-10 flex flex-col h-full">
+              <TopHeader />
+              
+              <div className="flex-1 p-6 lg:p-10 max-w-[1400px] mx-auto w-full">
+                {/* Hero Header */}
+                <header className="mb-10 mt-4 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                  <div>
+                    <h1 className="text-4xl font-bold tracking-tight text-white mb-2">{MOCK_PROFILE.tagline}</h1>
+                    <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
+                      部署于 NEXUS 架构的内容聚合终端。这里是文字与光影的数据化存留地。系统正在实时处理您的全量资产。
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium hover:bg-white/10 transition-colors flex items-center gap-2">
+                      <Settings size={16} /> Dashboard 设置
+                    </button>
+                    <button className="px-4 py-2 rounded-xl bg-[#afede3] text-black text-sm font-bold shadow-[0_0_20px_rgba(175,237,227,0.3)] hover:bg-teal-300 transition-colors flex items-center gap-2">
+                      <PenTool size={16} /> 创建新内容
+                    </button>
+                  </div>
+                </header>
+
+                <StatsGrid />
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <DataAnalyticsChart />
+                  <SystemLogs />
+                </div>
+
+                <OriginalContentZone />
+
+                <footer className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 pb-12">
+                  <p>© 2026 {MOCK_PROFILE.name} OS. High-Performance UI Architecture.</p>
+                  <div className="flex items-center gap-4">
+                    <a href="#" className="hover:text-white transition-colors">隐私政策</a>
+                    <a href="#" className="hover:text-white transition-colors">服务条款</a>
+                    <a href="#" className="hover:text-white transition-colors">API 文档</a>
+                  </div>
+                </footer>
+              </div>
+            </div>
+          </main>
+        </div>
+      </motion.div>
+    </>
+  );
+};
+
+
+// ==========================================
+// 7. 应用入口 (Main App Component)
+// ==========================================
+export default function UltimateSaaSBlogHome() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0c] text-slate-50 font-sans selection:bg-[#afede3]/30 selection:text-white">
+      {/* 由于这里是模拟完整环境，我们直接渲染动画场景。
+        它内部包含了 300vh 的滚动轨道，并在向下滚动后展现真正的 Dashboard 主页。
+      */}
+      <LoveScrollSequence profile={MOCK_PROFILE} />
+      
+      <style dangerouslySetInnerHTML={{__html: `
+        /* 全局滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        html, body { overscroll-behavior: none; }
+      `}} />
+    </div>
+  );
+}

@@ -3,94 +3,702 @@ import { getCollection } from "astro:content";
 
 export async function getStaticPaths() {
   const photos = await getCollection("photos");
-  const sorted = photos.sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+  const sorted = photos.sort(
+    (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+  );
 
   return sorted.map((photo, index) => ({
     params: { slug: photo.slug },
-    props: { 
+    props: {
       photo,
       prev: index > 0 ? sorted[index - 1] : null,
-      next: index < sorted.length - 1 ? sorted[index + 1] : null
+      next: index < sorted.length - 1 ? sorted[index + 1] : null,
     },
   }));
 }
 
 const { photo, prev, next } = Astro.props;
 const { Content } = await photo.render();
-const { title, date, location = "未知地点", camera, lens, settings = {}, photos = [] } = photo.data;
+const {
+  title,
+  date,
+  location = "未知地点",
+  camera,
+  lens,
+  settings = {},
+  photos = [],
+} = photo.data;
 ---
 
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{title} · 摄影</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap" rel="stylesheet">
+    <meta name="description" content={`${title} · 摄影记录`} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&display=swap"
+      rel="stylesheet"
+    />
+
     <style>
-      :root { --bg: #f9f9f9; --card-bg: #ffffff; --text-main: #1a1a1a; --text-sub: #888888; --accent: #10b981; --border: #eeeeee; --radius: 20px; --shadow: 0 4px 30px rgba(0, 0, 0, 0.05); }
-      body { background: var(--bg); color: var(--text-main); font-family: -apple-system, system-ui, sans-serif; padding: 20px; margin: 0; }
-      .container { max-width: 800px; margin: 0 auto; padding-top: 40px; padding-bottom: 80px; }
-      .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 30px; font-weight: 700; }
-      .breadcrumb a { text-decoration: none; color: var(--text-main); }
-      .breadcrumb .slash { opacity: 0.2; }
-      header { margin-bottom: 40px; }
-      .title { font-family: 'Noto Serif SC', serif; font-size: 2.5rem; margin-bottom: 10px; }
-      .meta-info { color: var(--text-sub); font-size: 14px; display: flex; gap: 15px; }
-      .exif-container { background: #f4f4f5; padding: 25px; border-radius: var(--radius); margin-bottom: 40px; }
-      .exif-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-      .exif-item { background: #fff; padding: 14px 18px; border-radius: 14px; display: flex; justify-content: space-between; font-size: 13px; }
-      .exif-label { color: #999; }
-      .exif-value { font-weight: 600; color: #444; }
-      .photo-gallery { display: flex; flex-direction: column; gap: 24px; margin-bottom: 40px; }
-      .photo-gallery img { width: 100%; border-radius: 16px; box-shadow: var(--shadow); }
-      .notes { background: var(--card-bg); padding: 35px; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); }
-      
-      .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 60px; gap: 15px; }
-      .nav-link { flex: 1; padding: 15px; background: #fff; border: 1px solid var(--border); border-radius: 16px; text-decoration: none; color: var(--text-main); transition: 0.3s; display: flex; flex-direction: column; min-width: 0; }
-      .nav-link:hover { border-color: var(--accent); transform: translateY(-2px); }
-      .nav-label { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; }
-      .nav-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .back-center { padding: 10px 20px; background: #eee; border-radius: 30px; color: #666; text-decoration: none; font-size: 13px; }
-      .empty-space { flex: 1; }
-      .text-right { text-align: right; }
-      @media (max-width: 600px) { .exif-grid { grid-template-columns: 1fr; } .pagination { flex-direction: column; } .back-center { order: 3; width: 100%; text-align: center; } }
+      :root {
+        color-scheme: light dark;
+
+        --bg-base: #f4f6f7;
+        --bg-elevated: rgba(255, 255, 255, 0.76);
+        --bg-elevated-strong: rgba(255, 255, 255, 0.88);
+
+        --ambient-1: #afede3;
+        --ambient-2: #e8f5ff;
+        --ambient-3: #f4edff;
+        --ambient-4: #dff3ef;
+
+        --text-main: #1c1c1f;
+        --text-sub: #6f737b;
+        --text-muted: #9ca2aa;
+
+        --accent: #79ddc9;
+        --accent-strong: #56cbb1;
+
+        --border-soft: rgba(255, 255, 255, 0.62);
+        --border-strong: rgba(255, 255, 255, 0.94);
+        --border-faint: rgba(20, 24, 31, 0.06);
+
+        --shadow-xs: 0 2px 10px rgba(17, 24, 39, 0.04);
+        --shadow-sm: 0 8px 24px rgba(17, 24, 39, 0.06);
+        --shadow-md: 0 18px 48px rgba(17, 24, 39, 0.09);
+        --shadow-lg: 0 32px 80px rgba(17, 24, 39, 0.12);
+
+        --radius-md: 24px;
+        --radius-lg: 34px;
+        --radius-xl: 42px;
+        --radius-pill: 999px;
+
+        --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-base: #06070a;
+          --bg-elevated: rgba(19, 23, 30, 0.58);
+          --bg-elevated-strong: rgba(22, 27, 34, 0.78);
+
+          --ambient-1: #0b5b4d;
+          --ambient-2: #1a3758;
+          --ambient-3: #33224a;
+          --ambient-4: #123d3d;
+
+          --text-main: #f4f5f7;
+          --text-sub: #b3b8c1;
+          --text-muted: #7e8590;
+
+          --accent: #82e5d1;
+          --accent-strong: #5ed6bc;
+
+          --border-soft: rgba(255, 255, 255, 0.1);
+          --border-strong: rgba(255, 255, 255, 0.18);
+          --border-faint: rgba(255, 255, 255, 0.08);
+
+          --shadow-xs: 0 2px 10px rgba(0, 0, 0, 0.28);
+          --shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.38);
+          --shadow-md: 0 20px 52px rgba(0, 0, 0, 0.45);
+          --shadow-lg: 0 36px 88px rgba(0, 0, 0, 0.58);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 12% 16%, rgba(175, 237, 227, 0.42), transparent 30%),
+          radial-gradient(circle at 82% 22%, rgba(188, 220, 255, 0.32), transparent 26%),
+          radial-gradient(circle at 56% 84%, rgba(227, 217, 255, 0.22), transparent 28%),
+          linear-gradient(180deg, var(--bg-base) 0%, color-mix(in srgb, var(--bg-base) 92%, white 8%) 100%);
+        color: var(--text-main);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      .ambient-bg {
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .ambient-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(100px);
+        opacity: 0.68;
+        animation: floatBlob 18s ease-in-out infinite alternate;
+      }
+
+      .blob-1 {
+        width: 52vw;
+        height: 52vw;
+        left: -14vw;
+        top: -12vh;
+        background: radial-gradient(circle, var(--ambient-1) 0%, transparent 70%);
+      }
+
+      .blob-2 {
+        width: 48vw;
+        height: 48vw;
+        right: -12vw;
+        top: 8vh;
+        background: radial-gradient(circle, var(--ambient-2) 0%, transparent 72%);
+        animation-delay: -4s;
+      }
+
+      .blob-3 {
+        width: 42vw;
+        height: 42vw;
+        left: 24vw;
+        bottom: -18vh;
+        background: radial-gradient(circle, var(--ambient-3) 0%, transparent 72%);
+        animation-delay: -8s;
+      }
+
+      .blob-4 {
+        width: 36vw;
+        height: 36vw;
+        right: 18vw;
+        bottom: -8vh;
+        background: radial-gradient(circle, var(--ambient-4) 0%, transparent 72%);
+        animation-delay: -12s;
+      }
+
+      @keyframes floatBlob {
+        0% { transform: translate3d(0, 0, 0) scale(1); }
+        50% { transform: translate3d(3%, 4%, 0) scale(1.04); }
+        100% { transform: translate3d(-4%, 6%, 0) scale(0.96); }
+      }
+
+      .page {
+        width: 100%;
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 24px 20px 96px;
+      }
+
+      .site-header {
+        position: sticky;
+        top: 16px;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 28px;
+        padding: 12px 16px 12px 18px;
+        border-radius: var(--radius-pill);
+        background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-xs);
+        backdrop-filter: blur(22px) saturate(180%);
+        -webkit-backdrop-filter: blur(22px) saturate(180%);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        flex: 0 0 38px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 14px;
+        font-weight: 800;
+        color: #fff;
+        background:
+          linear-gradient(180deg, rgba(15, 18, 26, 0.92), rgba(25, 30, 40, 0.9));
+        box-shadow:
+          inset 0 0 0 2px rgba(255, 255, 255, 0.22),
+          0 8px 24px rgba(17, 24, 39, 0.14);
+      }
+
+      .brand-text {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .brand-name {
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.15;
+      }
+
+      .brand-sub {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.15;
+      }
+
+      .nav-links {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+
+      .nav-item {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 15px;
+        border-radius: var(--radius-pill);
+        color: var(--text-sub);
+        font-size: 14px;
+        font-weight: 600;
+        transition:
+          color 0.28s var(--ease-soft),
+          background 0.28s var(--ease-soft),
+          transform 0.28s var(--ease-soft);
+      }
+
+      .nav-item:hover,
+      .nav-item:focus-visible {
+        color: var(--text-main);
+        background: rgba(255, 255, 255, 0.34);
+        transform: translateY(-1px);
+        outline: none;
+      }
+
+      .hero-card,
+      .glass-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius-xl);
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.28)),
+          color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-md);
+        backdrop-filter: blur(26px) saturate(180%);
+        -webkit-backdrop-filter: blur(26px) saturate(180%);
+      }
+
+      .hero-card::before,
+      .glass-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(140deg, rgba(255, 255, 255, 0.42) 0%, transparent 30%),
+          radial-gradient(circle at top right, rgba(255, 255, 255, 0.24), transparent 30%);
+        pointer-events: none;
+      }
+
+      .hero-card {
+        padding: 34px;
+        margin-bottom: 18px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent-strong);
+        box-shadow: 0 0 14px rgba(86, 203, 177, 0.66);
+      }
+
+      .hero-title {
+        font-family: "Noto Serif SC", serif;
+        font-size: clamp(2rem, 5vw, 3.2rem);
+        line-height: 1.08;
+        font-weight: 800;
+        margin-bottom: 12px;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 14px;
+        color: var(--text-sub);
+      }
+
+      .meta-divider {
+        opacity: 0.5;
+      }
+
+      .exif-card {
+        padding: 22px;
+        margin-bottom: 18px;
+      }
+
+      .section-kicker {
+        display: inline-block;
+        margin-bottom: 12px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      .exif-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .exif-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.14));
+        border: 1px solid rgba(255, 255, 255, 0.32);
+      }
+
+      .exif-label {
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .exif-value {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-main);
+        text-align: right;
+      }
+
+      .gallery {
+        display: grid;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .photo-frame {
+        overflow: hidden;
+        border-radius: 28px;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.28)),
+          color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .photo-frame img {
+        width: 100%;
+        height: auto;
+      }
+
+      .article-card {
+        padding: 28px;
+      }
+
+      .article-content {
+        position: relative;
+        z-index: 1;
+        color: var(--text-main);
+        font-size: 15px;
+      }
+
+      .article-content :global(p) {
+        margin: 0 0 1em 0;
+        color: var(--text-sub);
+      }
+
+      .article-content :global(h1),
+      .article-content :global(h2),
+      .article-content :global(h3) {
+        font-family: "Noto Serif SC", serif;
+        line-height: 1.3;
+        margin: 1.2em 0 0.7em;
+        color: var(--text-main);
+      }
+
+      .article-content :global(ul),
+      .article-content :global(ol) {
+        padding-left: 1.3em;
+        margin: 0 0 1em;
+        color: var(--text-sub);
+      }
+
+      .article-content :global(blockquote) {
+        margin: 1.2em 0;
+        padding: 0.9em 1em;
+        border-left: 3px solid rgba(86, 203, 177, 0.4);
+        background: rgba(255, 255, 255, 0.22);
+        border-radius: 12px;
+        color: var(--text-sub);
+      }
+
+      .pagination {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 14px;
+        align-items: stretch;
+        margin-top: 34px;
+      }
+
+      .nav-link {
+        min-width: 0;
+        padding: 18px;
+        border-radius: 22px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.54), rgba(255, 255, 255, 0.18)),
+          color-mix(in srgb, var(--bg-elevated) 90%, transparent);
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-sm);
+        transition:
+          transform 0.28s var(--ease-soft),
+          box-shadow 0.28s var(--ease-soft),
+          border-color 0.28s var(--ease-soft);
+      }
+
+      .nav-link:hover,
+      .nav-link:focus-visible {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--border-strong);
+        outline: none;
+      }
+
+      .nav-label {
+        display: block;
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+      }
+
+      .nav-title {
+        display: block;
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .back-center {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 18px;
+        border-radius: var(--radius-pill);
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-sub);
+        background: rgba(255, 255, 255, 0.42);
+        border: 1px solid var(--border-soft);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+
+      .empty-space {
+        min-height: 1px;
+      }
+
+      .text-right {
+        text-align: right;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(18px);
+        filter: blur(10px);
+        animation: revealUp 0.72s var(--ease-soft) forwards;
+      }
+
+      .delay-1 { animation-delay: 0.06s; }
+      .delay-2 { animation-delay: 0.12s; }
+      .delay-3 { animation-delay: 0.18s; }
+
+      @keyframes revealUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+          filter: blur(0);
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          padding: 16px 16px 72px;
+        }
+
+        .site-header {
+          top: 10px;
+          flex-wrap: wrap;
+          gap: 14px;
+          padding: 10px 12px 10px 14px;
+        }
+
+        .brand-sub {
+          display: none;
+        }
+
+        .nav-links {
+          width: 100%;
+          justify-content: flex-end;
+        }
+
+        .hero-card,
+        .article-card,
+        .exif-card {
+          padding: 22px 18px;
+        }
+
+        .exif-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .pagination {
+          grid-template-columns: 1fr;
+        }
+
+        .back-center {
+          min-height: 48px;
+        }
+      }
     </style>
   </head>
-  <body>
-    <div class="container">
-      <nav class="breadcrumb">
-        <a href="/">Alex</a> <span class="slash">/</span> <a href="/photos">摄影</a> <span class="slash">/</span> <span style="color:var(--text-sub)">正文</span>
-      </nav>
-      <header>
-        <h1 class="title">{title}</h1>
-        <div class="meta-info"><span>{new Date(date).toLocaleDateString('zh-CN')}</span><span>•</span><span>{location}</span></div>
-      </header>
-      <div class="exif-container">
-        <div class="exif-grid">
-          <div class="exif-item"><span class="exif-label">相机</span><span class="exif-value">{camera || '--'}</span></div>
-          <div class="exif-item"><span class="exif-label">镜头</span><span class="exif-value">{lens || '--'}</span></div>
-          <div class="exif-item"><span class="exif-label">焦距</span><span class="exif-value">{settings.focal || '--'}</span></div>
-          <div class="exif-item"><span class="exif-label">光圈</span><span class="exif-value">{settings.aperture || '--'}</span></div>
-        </div>
-      </div>
-      <section class="photo-gallery">{photos.map((img: string) => <img src={img} alt={title} />)}</section>
-      <article class="notes"><Content /></article>
 
-      <div class="pagination">
-        {prev ? (
-          <a href={`/photos/${prev.slug}`} class="nav-link">
-            <span class="nav-label">← 上一组</span>
-            <span class="nav-title">{prev.data.title}</span>
-          </a>
-        ) : <div class="empty-space"></div>}
-        <a href="/photos" class="back-center">回列表</a>
-        {next ? (
-          <a href={`/photos/${next.slug}`} class="nav-link text-right">
-            <span class="nav-label">下一组 →</span>
-            <span class="nav-title">{next.data.title}</span>
-          </a>
-        ) : <div class="empty-space"></div>}
-      </div>
+  <body>
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="ambient-blob blob-1"></div>
+      <div class="ambient-blob blob-2"></div>
+      <div class="ambient-blob blob-3"></div>
+      <div class="ambient-blob blob-4"></div>
+    </div>
+
+    <div class="page">
+      <header class="site-header reveal">
+        <a href="/" class="brand" aria-label="返回首页">
+          <div class="brand-mark">A</div>
+          <div class="brand-text">
+            <span class="brand-name">Alex</span>
+            <span class="brand-sub">Photo Entry</span>
+          </div>
+        </a>
+
+        <nav class="nav-links" aria-label="页面导航">
+          <a class="nav-item" href="/">首页</a>
+          <a class="nav-item" href="/photos">摄影</a>
+          <a class="nav-item" href="/search/">搜索</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero-card reveal delay-1">
+          <span class="eyebrow">Photo</span>
+          <h1 class="hero-title">{title}</h1>
+          <div class="hero-meta">
+            <span>{new Date(date).toLocaleDateString("zh-CN")}</span>
+            <span class="meta-divider">·</span>
+            <span>{location}</span>
+          </div>
+        </section>
+
+        <section class="glass-card exif-card reveal delay-2">
+          <span class="section-kicker">EXIF</span>
+          <div class="exif-grid">
+            <div class="exif-item">
+              <span class="exif-label">相机</span>
+              <span class="exif-value">{camera || "--"}</span>
+            </div>
+            <div class="exif-item">
+              <span class="exif-label">镜头</span>
+              <span class="exif-value">{lens || "--"}</span>
+            </div>
+            <div class="exif-item">
+              <span class="exif-label">焦距</span>
+              <span class="exif-value">{settings.focal || "--"}</span>
+            </div>
+            <div class="exif-item">
+              <span class="exif-label">光圈</span>
+              <span class="exif-value">{settings.aperture || "--"}</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="gallery">
+          {photos.map((img: string, index: number) => (
+            <div
+              class="photo-frame reveal delay-3"
+              style={`animation-delay:${0.16 + index * 0.05}s;`}
+            >
+              <img src={img} alt={title} loading="lazy" />
+            </div>
+          ))}
+        </section>
+
+        <article class="glass-card article-card reveal delay-3">
+          <div class="article-content">
+            <Content />
+          </div>
+        </article>
+
+        <div class="pagination reveal delay-3">
+          {prev ? (
+            <a href={`/photos/${prev.slug}`} class="nav-link">
+              <span class="nav-label">← 上一组</span>
+              <span class="nav-title">{prev.data.title}</span>
+            </a>
+          ) : (
+            <div class="empty-space"></div>
+          )}
+
+          <a href="/photos" class="back-center">回列表</a>
+
+          {next ? (
+            <a href={`/photos/${next.slug}`} class="nav-link text-right">
+              <span class="nav-label">下一组 →</span>
+              <span class="nav-title">{next.data.title}</span>
+            </a>
+          ) : (
+            <div class="empty-space"></div>
+          )}
+        </div>
+      </main>
     </div>
   </body>
 </html>

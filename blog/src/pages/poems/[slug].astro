@@ -527,7 +527,7 @@ const { Content } = await poem.render();
         </nav>
       </header>
 
-      <main>
+      <main data-pagefind-body>
         <article class="poem-card reveal delay-1">
           <header class="poem-header">
             <span class="eyebrow">Poem</span>
@@ -541,29 +541,29 @@ const { Content } = await poem.render();
             <Content />
           </div>
         </article>
-
-        <div class="pagination reveal delay-2">
-          {prev ? (
-            <a href={`/poems/${prev.slug}`} class="nav-link">
-              <span class="nav-label">← 上一篇</span>
-              <span class="nav-title">{prev.data.title}</span>
-            </a>
-          ) : (
-            <div class="empty-space"></div>
-          )}
-
-          <a href="/poems" class="back-center">列表</a>
-
-          {next ? (
-            <a href={`/poems/${next.slug}`} class="nav-link text-right">
-              <span class="nav-label">下一篇 →</span>
-              <span class="nav-title">{next.data.title}</span>
-            </a>
-          ) : (
-            <div class="empty-space"></div>
-          )}
-        </div>
       </main>
+
+      <div class="pagination reveal delay-2" data-pagefind-ignore="all">
+        {prev ? (
+          <a href={`/poems/${prev.slug}`} class="nav-link">
+            <span class="nav-label">← 上一篇</span>
+            <span class="nav-title">{prev.data.title}</span>
+          </a>
+        ) : (
+          <div class="empty-space"></div>
+        )}
+
+        <a href="/poems" class="back-center">列表</a>
+
+        {next ? (
+          <a href={`/poems/${next.slug}`} class="nav-link text-right">
+            <span class="nav-label">下一篇 →</span>
+            <span class="nav-title">{next.data.title}</span>
+          </a>
+        ) : (
+          <div class="empty-space"></div>
+        )}
+      </div>
     </div>
   </body>
 </html>

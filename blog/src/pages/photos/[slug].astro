@@ -627,7 +627,7 @@ const {
         </nav>
       </header>
 
-      <main>
+      <main data-pagefind-body>
         <section class="hero-card reveal delay-1">
           <span class="eyebrow">Photo</span>
           <h1 class="hero-title">{title}</h1>
@@ -676,29 +676,29 @@ const {
             <Content />
           </div>
         </article>
-
-        <div class="pagination reveal delay-3">
-          {prev ? (
-            <a href={`/photos/${prev.slug}`} class="nav-link">
-              <span class="nav-label">← 上一组</span>
-              <span class="nav-title">{prev.data.title}</span>
-            </a>
-          ) : (
-            <div class="empty-space"></div>
-          )}
-
-          <a href="/photos" class="back-center">回列表</a>
-
-          {next ? (
-            <a href={`/photos/${next.slug}`} class="nav-link text-right">
-              <span class="nav-label">下一组 →</span>
-              <span class="nav-title">{next.data.title}</span>
-            </a>
-          ) : (
-            <div class="empty-space"></div>
-          )}
-        </div>
       </main>
+
+      <div class="pagination reveal delay-3" data-pagefind-ignore="all">
+        {prev ? (
+          <a href={`/photos/${prev.slug}`} class="nav-link">
+            <span class="nav-label">← 上一组</span>
+            <span class="nav-title">{prev.data.title}</span>
+          </a>
+        ) : (
+          <div class="empty-space"></div>
+        )}
+
+        <a href="/photos" class="back-center">回列表</a>
+
+        {next ? (
+          <a href={`/photos/${next.slug}`} class="nav-link text-right">
+            <span class="nav-label">下一组 →</span>
+            <span class="nav-title">{next.data.title}</span>
+          </a>
+        ) : (
+          <div class="empty-space"></div>
+        )}
+      </div>
     </div>
   </body>
 </html>

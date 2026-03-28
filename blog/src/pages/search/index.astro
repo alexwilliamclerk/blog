@@ -196,7 +196,6 @@
         display: inline-flex;
         align-items: center;
         gap: 12px;
-        min-width: 0;
       }
 
       .brand-mark {
@@ -464,6 +463,16 @@
         word-break: break-word;
       }
 
+      #list :global(.res-excerpt) {
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--text-sub);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
       #list :global(.res-arrow) {
         position: relative;
         z-index: 1;
@@ -605,7 +614,7 @@
         <section class="hero-card reveal delay-1">
           <span class="eyebrow">Search</span>
           <h1 class="hero-title">搜索</h1>
-          <p class="hero-text">输入关键词，检索诗歌与摄影内容。</p>
+          <p class="hero-text">只显示诗歌与摄影详情页结果。</p>
         </section>
 
         <section class="search-box reveal delay-2">
@@ -640,6 +649,23 @@
 
       let pagefind;
 
+      function isPoemDetail(url) {
+        return /^\/poems\/[^/]+\/?$/.test(url);
+      }
+
+      function isPhotoDetail(url) {
+        return /^\/photos\/[^/]+\/?$/.test(url);
+      }
+
+      function normalizeExcerpt(html = "") {
+        return html
+          .replace(/<mark>/g, "")
+          .replace(/<\/mark>/g, "")
+          .replace(/<[^>]+>/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
       async function initPagefind() {
         try {
           pagefind = await import("/pagefind/pagefind.js");
@@ -661,31 +687,35 @@
         }
 
         if (!pagefind) await initPagefind();
+        if (!pagefind) return;
 
         const search = await pagefind.search(query);
+        const rawResults = await Promise.all(search.results.map((r) => r.data()));
 
-        if (search.results.length === 0) {
+        const filteredResults = rawResults
+          .filter((r) => isPoemDetail(r.url) || isPhotoDetail(r.url))
+          .slice(0, 10);
+
+        if (filteredResults.length === 0) {
           $list.innerHTML = "";
           $hint.style.display = "block";
-          $hint.innerText = "没有找到匹配的痕迹，换个词试试？";
+          $hint.innerText = "没有找到匹配的详情内容，换个词试试？";
           return;
         }
 
         $hint.style.display = "none";
-        const results = await Promise.all(
-          search.results.slice(0, 10).map((r) => r.data())
-        );
 
-        $list.innerHTML = results
+        $list.innerHTML = filteredResults
           .map((r) => {
-            const isPoem = r.url.includes("/poems/");
-            const typeLabel = isPoem ? "诗歌" : "摄影";
+            const typeLabel = isPoemDetail(r.url) ? "诗歌" : "摄影";
+            const excerpt = normalizeExcerpt(r.excerpt || "");
 
             return `
               <a href="${r.url}" class="res-card">
                 <div class="res-content">
                   <span class="res-tag">${typeLabel}</span>
                   <span class="res-title">${r.meta.title || "无标题碎片"}</span>
+                  ${excerpt ? `<span class="res-excerpt">${excerpt}</span>` : ""}
                 </div>
                 <span class="res-arrow">→</span>
               </a>
@@ -696,7 +726,7 @@
 
       $q.addEventListener("input", () => {
         clearTimeout(window.searchTimer);
-        window.searchTimer = setTimeout(doSearch, 300);
+        window.searchTimer = setTimeout(doSearch, 250);
       });
 
       initPagefind();
